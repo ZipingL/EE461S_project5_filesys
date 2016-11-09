@@ -1,0 +1,265 @@
+	     	 +--------------------------+
+       	     |		    EE 461S			|
+		     | PROJECT 2: USER PROGRAMS	|
+		     | 	   DESIGN DOCUMENT     	|
+		     +--------------------------+
+
+---- GROUP ----
+
+>> Fill in the names and email addresses of your group members.
+
+Ziping Liu <email@domain.example>
+Mukundan Kuthalam <mukundan@utexas.edu>
+FirstName LastName <email@domain.example>
+
+---- PRELIMINARIES ----
+
+>> If you have any preliminary comments on your submission, notes for the
+>> TAs, or extra credit, please give them here.
+
+Created this doc because it was mentioned on Piazza that it could be extra credit
+
+>> Please cite any offline or online sources you consulted while
+>> preparing your submission, other than the Pintos documentation, course
+>> text, lecture notes, and course staff.
+
+A few slides that were prepared by Stanford professors and were available online.
+
+			   ARGUMENT PASSING
+			   ================
+
+---- DATA STRUCTURES ----
+
+---- For process_execute(const char* file_name) ----
+int file_char_length; //This variable check the name of the file name that was passed into process_execute
+char file_name_no_args[file_char_length]; //This array stores that file name
+char* argv[1]; //This is an array that will just be the file name when the file name is validated
+struct dir *dir; //This variable stores the root directory to be used to lookup the given file name first
+struct inode *inode; //Holds a pointer to the file, assuming file_name (in process_execute) points to a valid file
+bool file_validation; //Flag that is set if the file that is being used to start a process is set
+struct thread *t; //A pointer to the current thread
+struct child_list_elem *success; //A pointer to the newly created child process that either holds a pointer to the child in the child list or has NULL upon failure
+
+---- For process_wait(tid_t child_tid UNUSED) ----
+struct thread* current_thread; //A variable that contains information about the current thread
+struct list_elem* e; //This looks and gets information on the child process with the specified child_tid
+struct child_list_elem *child_element; //This looks in the list of currently running processes to get information on the child process
+int exit_status; //This value gets the exit status of the child process that the function was waiting on
+
+---- For process_exit(int exit_status) ----
+struct thread *cur; //Contains information about the current thread
+struct semaphore *child_sema;
+uint32_t *pd; //This has a pointer to the current process' page table entry
+struct list_elem *e; //This contains information on every child_list that the current process may have or every fd_table of the processes that called process_exit
+struct child_list_elem *child_element; //This contains a pointer to every element of child_list
+struct fd_table_element *element; //This contains information on every element of the fd table
+
+---- For setup_stack(void **esp, char* file_name) ----
+unioned_esp_pointer_t unioned_esp;
+char* argv[MAX_ARGS_COUNT]; //An array of the argument parameters
+int argc; //This is the total number of arguments
+int argc_cpy; //The total number of agruments-1 to use as a counter when filling the stack
+uint32_t* esp_arg_ptrs[MAX_ARGS_COUNT]; //Stores pointers of where each string was stored in the stack
+int total_args_length_count; //Keeps track of the total number of bytes used by the args, so we can add padding if needed
+int arg_length; //Stores the length of each argument to add to total_args_length_count
+int char_per_word; //Stores how many bytes are in a word
+int remainder; //Stores how many bytes of padding are needed
+char* temp; //Points to where argv starts
+
+---- ALGORITHMS ----
+
+---- For process_execute(const char* file_name) ----
+In order to start the process, there is no need to get the arguments that were given. Thus, by using a function called parse_command_arguments, the first step in process_execute is getting the file name that we want to use to start the process. parse_command_arguments achieves that purpose by splitting the input by spaces using strtok_r(). Now the process accquires a lock so that no other process interferes with the next few lines of code, which check if the file that was given is valid. If the file is valid, then a new thread is started and the parent waits for this child process to start. If the file name was invalid, the child was not added to the list of child processes, or the child process was not successfully started, an error is returned (tid = -1). The process does check for a full page table, so that the page table is not overflowing with entries.
+
+---- For process_wait(tid_t child_tid UNUSED) ----
+The thread that calls process_wait must first look for the child process that it wants to wait on. It then waits on that child process to report back that it finished, so then the parent can simply mark the child as done and remove it from the list of child processes.
+
+---- For process_exit(int exit_status) ----
+Now process_exit must acctually exit the current process by having the child mark itself as done and close the file that it had to open to run its process. The current process then goes through its child lists and its fd table to remove any children processes and files that were open. Then the child removes its own page entry. This keeps the page table from overflowing.
+
+---- For setup_stack(void **esp, char* file_name) ----
+This function is what sets up the stack to be used by the system calls. The file_name, which contains all the information is parsed and the number of arguments it returns are also stored in two variables, one to push to the stack and one to use as an index to fill the stack. Then these arguments are pushed onto the stack in the right order (since we kept track of the maximum number of arguments) and then padding is added to the stack if needed, and this can be done by keeping track of the total number of arguments that were pushed and dividing it by 4. The remainder is the amount of padding needed in bytes. Then the pointer to argv is added and so is argc - the number of arguments that were given. Then the esp pointer is set to the correct location of the stack.
+
+
+---- RATIONALE ----
+
+>> A3: Why does Pintos implement strtok_r() and not strtok()?
+
+When strtok() is used, it can parse the same argument multiple times. That is, if it is called twice, then it will parse the same argument twice. Now if another thread decides to parse the value that was passed to strtok(), then that value will be modified without any other thread being aware of such an action. However, strtok_r() keeps track of the context of successive calls, so that if a different thread parses the same thing, the function understand that a new thread is parsing that string, and so it maintains context between multiple threads. This is why Pintos uses strtok_r() - it is to avoid concurrency issues between multiple threads.
+
+>> A4: In Pintos, the kernel separates commands into a executable name
+>> and arguments.  In Unix-like systems, the shell does this
+>> separation.  Identify at least two advantages of the Unix approach.
+
+In Unix systems, when the shell does the separation and then makes a system call, the stack is then already set up with the arguments in the correct order. The work is done ahead of time by the shell, which means the kernel can then be more responsive when it comes to actually getting the request it was sent completed. Now another advantage lies with concurrency. Since the shell can keep track of multiple jobs at once, it already knows the context in which the arguments are parsed. That is, it knows what process it is dealing with and what that process is expecting to see. Thus, the shell can easily switch between contexts compared to the kernel and so Pintos does not have to concern itself with such things.
+
+			     SYSTEM CALLS
+			     ============
+
+---- DATA STRUCTURES ----
+
+>> B1:
+---- For syscall_handler(struct intr_frame *f UNUSED) ----
+uint32_t system_call_number; //This variable gets assigned the number on top of the interrupt stack, which happens to be the number that corresponds to the system call that was made
+uint32_t *stack_ptr; //This is just a copy of the esp (stack) pointer. It allows us to jump around the stack without messing with the stored stack pointer.
+char* name; //The file name
+uint32_t file_size = 0; //The size of each file
+int fd = -1; //The file descriptor number of any file that is being operated on.
+int size_read; //This records how many bytes were read from the file and -1 if there was an error during the read. Also applies to write
+
+---- For exec(const char* name) ----
+tid_t pid; //The process id of the process that was started by passing in name to the function. Holds -1 if the file could not be loaded or there was any other issue with the file.
+
+---- For filesize_get(int fd) ----
+struct thread* current_thread; //Points to the current thread that wants to get the size of the file associated with fd
+struct list_elem* e; //This gets the entry in the fd table associated with the given fd for the current process
+struct fd_list_element *fd_element; //This gets the actual entry in the fd table to actually use
+
+---- For exit(int status, struct intr_frame *f), find_fd_element(int fd, struct thread* current_thread), find_child_element(struct thread* current_thread, tid_t pid) ----
+struct thread *t; //Pointer to the current thread
+struct list_elem *e; //An iterator through the fd table that is used for closing all the open files
+struct fd_list_element *fd_element; //This gets the actual element in the fd table so as to operate on that entry (i.e. close that file)
+
+---- For create (const char* file, unsigned initial_size) ----
+bool return_bool; //Just something to hold the success status of filesys_create and return that at the end of create()
+
+---- For open(const char* file) ----
+struct thread* current_thread; //Same as before (see filesize_get())
+struct file* fp; //A pointer to the file that was just opened by filesys_open()
+int return_fd; //A value that holds the fd of the newly opened file that was added to the fd table or -1 in case of an error
+
+---- For read(int fd, void* buffer, unsigned size) ----
+int return_size; //Holds the number of bytes read from the file or -1 in case of an error
+struct thread *t; //Same as in exit() call
+struct list_elem *e; //Same as in filesize_get()
+struct fd_list_element *fd_element; //Same as exit()
+
+---- For write(int fd, const void *buffer, unsigned size), seek(int fd, unsigned position), tell(int fd) ----
+struct thread* current_thread; //Same as in filesize_get()
+struct list_elem *e; //Same as in filesize_get()
+struct fd_list_element *fd_element; //Same as exit()
+
+---- For close(int fd) ----
+struct thread* current_thread; //Same as in filesize_get()
+struct list_elem *e; //Same as in filesize_get()
+struct list_elem *return_e; //Holds a pointer to the element that was removed from the list of files in the fd table
+struct fd_list_element *fd_element; //Same as exit()
+
+---- For add_file_to_fd_table(struct thread* current_thread, struct file* fp) ----
+int return_fd; //Same as open()
+struct fd_list_element *fd_element; //Makes space to store the details of a file to be added to the fd table
+
+---- For add_child_to_list(struct thread* parent_thread, tid_t pid) ----
+struct child_list_elem* child_element; //This guy saves space for all the information about a child process and adds itself to the list of child processes
+struct thread* child_thread; //This merely gets information about the thread with the child_pid
+
+>> B2:
+File descriptors are unique to each process. When a file is opened, it is assigned a "file descriptor" which is an integer value that can then be used to refer to that specific file. By default, STDIN is 0, STDOUT is 1, and STDERR is 2. Now, as mentioned before, the file descriptor table is unique to each process. This avoides concurrency issues that can crop up. Say the file descriptor table was common across processes. If process 1 closes STDOUT, but process 2 wants to write to the console, it cannot do so because of what process 1 did.
+
+---- ALGORITHMS ----
+
+>> B3: Describe your code for reading and writing user data from the
+>> kernel.
+
+Before read() or write() is even implemented, the file to read or write to is expected to have been opened and added to the file descriptor table for that process, or an error is returned.
+
+---- For read(int fd, void* buffer, unsigned size) ----
+If the user wants to read from STDIN, then input_getc() is used to collect a char at a time from STDIN and the data is then stored in a buffer. Otherwise, the file is validated. In other words, its existence in the file descriptor table is verified and then the process sets a lock on all processes while it reads from the file using file_read. In any case, the number of bytes read is returned by read()
+
+---- For write(int fd, const void *buffer, unsigned size) ----
+The write function is similar. It also checks for whether the user wants to read from STDOUT. If they do, the appropriate number of bytes is stored in buffer using putbuf(). Else, the function again verifies the existence of the given fd in the file descriptor table and then locks down other processes while it writes to the file. The function then returns the number of bytes written.
+
+>> B4: Suppose a system call causes a full page (4,096 bytes) of data
+>> to be copied from user space into the kernel.  What is the least
+>> and the greatest possible number of inspections of the page table
+>> (e.g. calls to pagedir_get_page()) that might result?  What about
+>> for a system call that only copies 2 bytes of data?  Is there room
+>> for improvement in these numbers, and how much?
+
+
+
+>> B5: Briefly describe your implementation of the "wait" system call
+>> and how it interacts with process termination.
+
+The system call wait depends entirely on process_wait(). It merely gives that function that the user wants to wait on, and then returns the return value of process_wait()
+
+>> B6: Any access to user program memory at a user-specified address
+>> can fail due to a bad pointer value.  Such accesses must cause the
+>> process to be terminated.  System calls are fraught with such
+>> accesses, e.g. a "write" system call requires reading the system
+>> call number from the user stack, then each of the call's three
+>> arguments, then an arbitrary amount of user memory, and any of
+>> these can fail at any point.  This poses a design and
+>> error-handling problem: how do you best avoid obscuring the primary
+>> function of code in a morass of error-handling?  Furthermore, when
+>> an error is detected, how do you ensure that all temporarily
+>> allocated resources (locks, buffers, etc.) are freed?  In a few
+>> paragraphs, describe the strategy or strategies you adopted for
+>> managing these issues.  Give an example.
+
+One big way of making sure bad values don't cause an issue is by making use of data structures. For example, if a file descriptor could be invalid, then the function that is operating on the file referred to by the file descriptor should be able to quickly find that the file descriptor is a bad one. It also should be aware of any errors that occur as a result of trying to operate or find a file in the table. However, operating on these data structures can take a lot of code, and so it is best to write separate functions for just finding an element to or editing a data structure that needs to be utilized.
+
+Also, in addition to encapsulating individual tasks as described above, we also made use of the values and functions that were already defined for us (For example, SYS_CREATE and start_process()) since those did many of the checks and actual operations on files that were needed. We also minimized the amount of code needed so that when an error is detected, any allocated resources were immediately freed and the function returned the error. Waiting to do so may cause functional issues and would make for hard to read code.
+
+For example, supposed an invalid file descriptor was given to the close() function. It would first make use of the find_fd_element() function to validate the existence of the file before continuing so that:
+1. The actual operation of close() on any valid input is written separately from the error checking code
+2. The function can quickly verify the file's existence and quickly returns before that invalid input can even be processed
+Also, the use of other functions is implemented so that even if close() got a valid file descriptor (like 2), then STDERR would be closed in what appears to be one line (see the call to file_close()) meaning it becomes easy to check if the locks were set and freed appropriately
+
+---- SYNCHRONIZATION ----
+
+>> B7: The "exec" system call returns -1 if loading the new executable
+>> fails, so it cannot return before the new executable has completed
+>> loading.  How does your code ensure this?  How is the load
+>> success/failure status passed back to the thread that calls "exec"?
+
+The code first actually loads the process using process_execute() and ensures that the pid that was returned is a valid one. When process_execute() runs its code, it waits on start_process to hear about the status of the process that was supposed to start. In start_process(), the load() function is directly checked to see if the file could be loaded. If not, the error code goes all the way back to process_execute(), which returns an invalid pid of -1. When exec() sees that pid, it immediately returns an error, as it knows that the process could not be executed. If the process was executable, then process_execute() returns a pid for the new process and this is then returned by exec().
+
+>> B8: Consider parent process P with child process C.  How do you
+>> ensure proper synchronization and avoid race conditions when P
+>> calls wait(C) before C exits?  After C exits?  How do you ensure
+>> that all resources are freed in each case?  How about when P
+>> terminates without waiting, before C exits?  After C exits?  Are
+>> there any special cases?
+
+P can only call wait(C) when it wants to wait for C to finish. This is because after the child to operate on is found (and only one process can do so at once, thanks to the lock), the parent must wait on the child to do a sema-up so that the parent can continue. Otherwise, it will continue to wait on C before C exits. After C exits, again, the parent has already found the child element without other processes interfering, so then the parent will be able to call free() on that child element without having to worry about other processes. This also ensures that all resources are freed, because even in multiple threads, all processes will be aware of what child is being freed. If the parent P exits early, then it must call process_exit(), where the children are then forced to clear themselves by setting their attributes to the proper values. This also takes care of issues that crop up after C exits. The only other special case is if P and C exit at the same time. This would cause both to call process_exit(). However, only one process can free what it needs to due to our use of locks, so this case will then become similar to P exiting before or after C, and as said above, that is taken care of.
+
+---- RATIONALE ----
+
+>> B9: Why did you choose to implement access to user memory from the
+>> kernel in the way that you did?
+
+>> B10: What advantages or disadvantages can you see to your design
+>> for file descriptors?
+
+Our design for file descriptors makes it easy to quickly find a file descriptor in the table. This means functions such as read() and write() can operate very quickly. However, in situations such as process_exit(), where the file descriptor table needs to be removed, it takes a while to iterate through all the open files and remove them. Now, a linked list could have worked too, but operations such as read() and write() would now have to go through and find the file to operate on. Therefore, it is likely better to stick with our design, since most calls focus only on dealing with one file, rather than something like the entire table.
+
+>> B11: The default tid_t to pid_t mapping is the identity mapping.
+>> If you changed it, what advantages are there to your approach?
+
+No changes were made to this mapping.
+
+			   SURVEY QUESTIONS
+			   ================
+
+Answering these questions is optional, but it will help us improve the
+course in future quarters.  Feel free to tell us anything you
+want--these questions are just to spur your thoughts.  You may also
+choose to respond anonymously in the course evaluations at the end of
+the quarter.
+
+>> In your opinion, was this assignment, or any one of the three problems
+>> in it, too easy or too hard?  Did it take too long or too little time?
+
+>> Did you find that working on a particular part of the assignment gave
+>> you greater insight into some aspect of OS design?
+
+>> Is there some particular fact or hint we should give students in
+>> future quarters to help them solve the problems?  Conversely, did you
+>> find any of our guidance to be misleading?
+
+>> Do you have any suggestions for the TAs to more effectively assist
+>> students, either for future quarters or the remaining projects?
+
+>> Any other comments?
+
