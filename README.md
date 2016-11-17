@@ -5,13 +5,19 @@
 ## Initial Steps
 
  * Change line 363 in the file Pintos.pm in the utils folder from this:
+
 		$name = find_file ("/home/ramesh/EE461S/SKKU/pintos/userprog/build/loader.bin") if !defined $name;
+
 	* To this: 
-		$name = find_file(‘<INSERT PATH TO FILESYS BUILD FOLDER>/loader.bin’) if !defined $name;
+
+			$name = find_file(‘<INSERT PATH TO FILESYS BUILD FOLDER>/loader.bin’) if !defined $name;
  * Change line 260 in the file pintos in the utils folder from this: 
+
 		my $name =  "/home/ramesh/EE461S/SKKU/pintos/userprog/build/kernel.bin";
+
 	* To this: 
-		my $name =  "<INSERT PATH TO FILESYS BUILD FOLDER>/kernel.bin";
+
+			my $name =  "<INSERT PATH TO FILESYS BUILD FOLDER>/kernel.bin";
 
 
 ## Passing Tests
