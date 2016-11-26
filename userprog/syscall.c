@@ -239,6 +239,22 @@ syscall_handler (struct intr_frame *f) //UNUSED)
 	    	break;
 	    }
 
+	    case SYS_MKDIR:
+	    {
+	    	name = *(stack_ptr + 1);
+			if (name == NULL) { //Check for a non-existant file of course
+				exit(-1, f);
+			}
+			else {
+				if(get_user(name) == -1) // check if pointer to name is actually valid
+					exit(-1, f);
+			}
+
+			f->eax = filesys_create(name, 0, true);
+			break;
+
+	    }
+
 		default:
 		{
 			//#ifdef PROJECT2_DEBUG
@@ -321,7 +337,7 @@ int wait (tid_t pid) {
 /* Creates a new file called file initially initial_size bytes in size. Returns true if successful, false otherwise. Creating a new file does not open it: opening the new file is a separate operation which would require a open system call. */
 
 bool create (const char *file, unsigned initial_size) {
-	bool return_bool = filesys_create(file, initial_size); //Already in filesys.c...
+	bool return_bool = filesys_create(file, initial_size, false); //Already in filesys.c...
 
 	return return_bool;
 }
@@ -347,7 +363,7 @@ int open (const char *file) {
 
 	struct thread* current_thread = thread_current();
 	lock_acquire(&read_write_lock);
-	struct file* fp = filesys_open(file); //Again, already in filesys.c
+	struct file* fp = filesys_open(file, false); //Again, already in filesys.c
 	lock_release(&read_write_lock);
 	int return_fd = -1;
 	/* Now update the file descriptor table */

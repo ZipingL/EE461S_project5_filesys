@@ -14,6 +14,8 @@
 #ifdef USERPROG
 #include "userprog/process.h"
 #include "userprog/syscall.h"
+#include "filesys/filesys.h"
+#include "filesys/directory.h"
 #endif
 
 /* Random value for struct thread's `magic' member.
@@ -106,6 +108,7 @@ thread_init (void)
   //Initialize fd table for ?
   list_init(&initial_thread->fd_table);
   initial_thread->fd_table_counter = 2;
+
 }
 
 /* Starts preemptive thread scheduling by enabling interrupts.
@@ -222,6 +225,10 @@ thread_create (const char *name, int priority,
 
   t->exec_fp = NULL;
   t->load_failed = false;
+
+  /* Setup current directory to root, NULL signifies root dir as cd */
+  t->cd.cd_dir = thread_current()->cd.cd_dir;
+
 
   /* Add to run queue. */
   thread_unblock (t);

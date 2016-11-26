@@ -6,6 +6,7 @@
 #include "filesys/inode.h"
 #include "threads/malloc.h"
 
+
 /* A directory. */
 struct dir 
   {
@@ -26,7 +27,8 @@ struct dir_entry
 bool
 dir_create (block_sector_t sector, size_t entry_cnt)
 {
-  return inode_create (sector, entry_cnt * sizeof (struct dir_entry));
+  printf("hello\n");
+  return inode_create (sector, entry_cnt * sizeof (struct dir_entry), true);
 }
 
 /* Opens and returns the directory for the given INODE, of which
@@ -47,6 +49,17 @@ dir_open (struct inode *inode)
       free (dir);
       return NULL; 
     }
+}
+
+/* get the parent dir of child dir */
+/* input is the child dir */
+struct dir *
+dir_open_parent(struct dir * child_dir)
+{
+  struct inode* child_inode = dir_get_inode(child_dir);
+  block_sector_t parent_sector = child_inode->parent;
+  struct inode * parent_inode = inode_open(parent_sector);
+  return dir_open(parent_inode);
 }
 
 /* Opens the root directory and returns a directory for it.

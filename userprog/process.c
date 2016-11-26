@@ -267,6 +267,8 @@ process_exit (int exit_status)
 
      }
 
+ // Free the cd data field
+ free(cur->cd.cd_str);
 
   /* Destroy the current process's page directory and switch back
      to the kernel-only page directory. */
@@ -405,7 +407,7 @@ load (const char *file_name, void (**eip) (void), void **esp)
 
   /* Open executable file. */
   lock_acquire(&open_close_lock);
-  file = filesys_open (argv[0]);
+  file = filesys_open (argv[0], false);
   lock_release(&open_close_lock);
 
   if(file == NULL)
@@ -419,7 +421,7 @@ load (const char *file_name, void (**eip) (void), void **esp)
 
     if(inode != NULL)
     {
-      file = filesys_open(inode);
+      file = filesys_open(inode, false);
     }
 
   }

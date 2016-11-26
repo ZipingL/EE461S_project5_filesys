@@ -6,6 +6,13 @@
 #include <stdint.h>
 #include "threads/synch.h"
 
+
+struct current_directory
+{
+  char* cd_str;
+  struct dir* cd_dir;
+};
+
 /* States in a thread's life cycle. */
 enum thread_status
   {
@@ -105,6 +112,8 @@ struct thread
    struct file * exec_fp;
    bool load_failed;
    struct child_list_elem *child_data; //Child can update its status for parent to see
+
+   struct current_directory cd;
 #endif
 
     /* Owned by thread.c. */
