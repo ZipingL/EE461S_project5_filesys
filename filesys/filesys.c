@@ -311,9 +311,15 @@ bool parse_file_path(char* command, char* argv[], char* parsed_name)
     i++;
     argv[i] = strtok_r(NULL, "/", &save);
   }
+
   
-  if(parsed_name)
+  if(parsed_name && argv[i-1])
     strlcpy(parsed_name, argv[i-1], strlen(argv[i-1])+1);
+
+  else
+    if(parsed_name)
+      parsed_name[0] = 0;
+
 
   int j = 2;
   while(j < (i))
@@ -348,9 +354,30 @@ bool parse_file_path(char* command, char* argv[], char* parsed_name)
 bool
 filesys_remove (const char *name) 
 {
-  struct dir *dir = dir_open_root ();
-  bool success = dir != NULL && dir_remove (dir, name);
+
+  // Check for "" file name
+  if(strcmp(name,"") == 0)
+    return NULL;
+  struct dir *dir = NULL; //dir_open_root (); // Don't open root by default
+  struct inode *inode = NULL;
+  char parsed_name[100];
+
+
+  bool success = filesys_find_dir(name, &inode, &dir, NULL, parsed_name);
+
+  if(parsed_name[0] == NULL)
+    return false;
+
+  if(success)
+  {
+    // Check if file name is over da limit
+  
+  if(strlen(parsed_name) > 14)
+    return NULL;
+  success = dir != NULL && dir_remove (dir, parsed_name);
   dir_close (dir); 
+  }
+
 
   return success;
 }

@@ -512,7 +512,12 @@ bool close (int fd) {
 
 	struct  fd_list_element *fd_element = list_entry (e, struct fd_list_element, elem_fd);
 	lock_acquire(&read_write_lock);
+	if(fd_element->warning == false)
 	file_close(fd_element->fp);
+	else
+	{
+	dir_close((struct dir*)fd_element->fp);
+	}
 	lock_release(&read_write_lock);
 	free(fd_element); // Free the element we just removed, please also see open()
 	return true;
