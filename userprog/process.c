@@ -230,6 +230,9 @@ process_exit (int exit_status)
      {
        struct list_elem *e = list_pop_front (&cur->fd_table);
        struct  fd_list_element *element = list_entry (e, struct fd_list_element, elem_fd);
+
+       // Close the file if it actually is one
+       if(element->warning == false)
        file_close(element->fp);
        free(element);
      }
@@ -407,7 +410,7 @@ load (const char *file_name, void (**eip) (void), void **esp)
 
   /* Open executable file. */
   lock_acquire(&open_close_lock);
-  file = filesys_open (argv[0], false);
+  file = filesys_open (argv[0], false, NULL);
   lock_release(&open_close_lock);
 
   if(file == NULL)
@@ -421,7 +424,7 @@ load (const char *file_name, void (**eip) (void), void **esp)
 
     if(inode != NULL)
     {
-      file = filesys_open(inode, false);
+      file = filesys_open(inode, false, NULL);
     }
 
   }

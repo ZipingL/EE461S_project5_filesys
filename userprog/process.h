@@ -23,6 +23,7 @@ struct fd_list_element {
 	struct list_elem elem_fd;
 	int fd;
 	struct file* fp;
+	bool warning;
 };
 
 // enums to be used for the child status

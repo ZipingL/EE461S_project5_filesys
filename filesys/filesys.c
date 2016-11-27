@@ -56,6 +56,11 @@ filesys_create (const char *name, off_t initial_size, bool type_dir)
   #ifdef FILESYS_DEBUG
   printf("filesys_create\n");
   #endif 
+
+    // Check if name is ""
+  if(strcmp(name, "") == 0)
+    return false;
+
   block_sector_t inode_sector = 0;
   block_sector_t parent_sector;
   struct dir *dir = NULL;
@@ -66,6 +71,7 @@ filesys_create (const char *name, off_t initial_size, bool type_dir)
   // Check if parsed name is bigger than allowed by pintos
   if(strlen(parsed_name) > 14)
     return false;
+
 
   #ifdef FILESYS_DEBUG
   printf("filesys find succ %d parsed name %s\n", success, parsed_name);
@@ -112,7 +118,7 @@ filesys_create (const char *name, off_t initial_size, bool type_dir)
    Fails if no file named NAME exists,
    or if an internal memory allocation fails. */
 struct file*
-filesys_open (const char *name, bool type_dir)
+filesys_open (const char *name, bool type_dir, bool* warning)
 {
     #ifdef FILESYS_DEBUG
   printf("filesysopen: name: %s\n", name);
@@ -151,7 +157,18 @@ filesys_open (const char *name, bool type_dir)
 
       if(found)
       {
+
+        // Tell caller user is trying to open a directory as a file
+        // if the caller cares (syscal will care)
+        if(inode->type_dir == true)
+        {
+          if(warning)
+            *warning = true;
+          return (struct file*) dir;
+        }
+
         return file_open(inode);
+
       }
       else
       {

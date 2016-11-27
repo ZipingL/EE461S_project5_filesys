@@ -13,6 +13,7 @@
 
 
 struct child_list_elem* add_child_to_list(struct thread* parent_thread, tid_t pid);
+int add_file_to_fd_table(struct thread* current_thread, struct file* fp, bool warning);
 
 static int
 get_user (const uint8_t *uaddr);
@@ -24,7 +25,7 @@ unsigned tell (int fd);
 bool seek(int fd, unsigned offset);
 bool close (int fd);
 void exit (int status, struct intr_frame *f);
-int write (int fd, const void *buffer, unsigned size);
+int write (int fd, const void *buffer, unsigned size, bool * warning);
 static struct lock fd_lock;
 void
 syscall_init (void)
@@ -178,9 +179,9 @@ syscall_handler (struct intr_frame *f) //UNUSED)
 			if(get_user(buffer) == -1)
 					exit(-1, f);
 			file_size = *(stack_ptr+3);
-
-			int size_write = write(fd, buffer, file_size);
-			if(size_write == -1)
+			bool warning = false;
+			int size_write = write(fd, buffer, file_size, &warning);
+			if(size_write == -1 && !warning)
 				exit(-1, f);
 			else
 				f->eax = size_write;
@@ -267,7 +268,7 @@ syscall_handler (struct intr_frame *f) //UNUSED)
 					exit(-1, f);
 			}
 
-			f->eax = filesys_open(name, true) != NULL ? true : false;
+			f->eax = filesys_open(name, true, NULL) != NULL ? true : false;
 			break;
 
 	    }
@@ -380,13 +381,14 @@ int open (const char *file) {
 
 	struct thread* current_thread = thread_current();
 	lock_acquire(&read_write_lock);
-	struct file* fp = filesys_open(file, false); //Again, already in filesys.c
+	bool warning = false;
+	struct file* fp = filesys_open(file, false, &warning); //Again, already in filesys.c
 	lock_release(&read_write_lock);
 	int return_fd = -1;
 	/* Now update the file descriptor table */
 	if (fp != NULL) {
 
-		return_fd = add_file_to_fd_table(current_thread, fp);
+		return_fd = add_file_to_fd_table(current_thread, fp, warning);
 	}
 	return return_fd; // IF The file could not be assigned a new file descriptor, then return_fd == -1
 }
@@ -442,7 +444,7 @@ int read (int fd, void *buffer, unsigned size)
 
     Fd 1 writes to the console. Your code to write to the console should write all of buffer in one call to putbuf(), at least as long as size is not bigger than a few hundred bytes. (It is reasonable to break up larger buffers.) Otherwise, lines of text output by different processes may end up interleaved on the console, confusing both human readers and our grading scripts. */
 
-int write (int fd, const void *buffer, unsigned size) { //Already done in file.c, but will implement anyway (super confused now)
+int write (int fd, const void *buffer, unsigned size, bool* warning) { //Already done in file.c, but will implement anyway (super confused now)
 
 
 	struct thread* current_thread = thread_current();
@@ -460,14 +462,17 @@ int write (int fd, const void *buffer, unsigned size) { //Already done in file.c
 		if(e == NULL)
 			goto write_done; // return error if file not found
 		struct  fd_list_element *fd_element = list_entry (e, struct fd_list_element, elem_fd);
-				lock_acquire(&read_write_lock);
-
+		if(fd_element->warning == true)
+		{
+			*warning = true;
+			goto write_done;
+		}
+		lock_acquire(&read_write_lock);
 		return_size = file_write (fd_element->fp, buffer, size) ;
-			lock_release(&read_write_lock);
+		lock_release(&read_write_lock);
 
 	}
 write_done:
-
 	return return_size;
 }
 
@@ -561,12 +566,13 @@ struct list_elem* find_child_element(struct thread* current_thread, tid_t pid)
 
 
 // TODO: Should check if file is already opened/added
-int add_file_to_fd_table(struct thread* current_thread, struct file* fp)
+int add_file_to_fd_table(struct thread* current_thread, struct file* fp, bool warning)
 {
 		int return_fd = -1;
 		struct fd_list_element* fd_element = malloc(sizeof(struct fd_list_element));
 		fd_element->fd = current_thread->fd_table_counter;
 		fd_element->fp = fp;
+		fd_element->warning =warning;
 		return_fd = fd_element->fd;
 
 		list_push_back(&current_thread->fd_table, &fd_element->elem_fd);
