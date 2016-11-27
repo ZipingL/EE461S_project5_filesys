@@ -59,21 +59,30 @@ filesys_create (const char *name, off_t initial_size, bool type_dir)
   block_sector_t inode_sector = 0;
   block_sector_t parent_sector;
   struct dir *dir = NULL;
+  struct inode *inode = NULL;
   char parsed_name[512];
-  bool success = filesys_find_dir(name, NULL, &dir, &inode_sector, parsed_name);
+  bool success = filesys_find_dir(name, &inode, &dir, &inode_sector, parsed_name);
+
   // Check if parsed name is bigger than allowed by pintos
   if(strlen(parsed_name) > 14)
     return false;
 
   #ifdef FILESYS_DEBUG
-  printf("filesys find succ %d parsed name %s", success, parsed_name);
+  printf("filesys find succ %d parsed name %s\n", success, parsed_name);
   #endif
   if(success) {
   // Add the file/dir to the specifieddirectory
   success = (dir != NULL
                   && free_map_allocate (1, &inode_sector)
-                  && inode_create (inode_sector, initial_size, type_dir)
-                  && dir_add (dir, parsed_name, inode_sector));
+                  && inode_create (inode_sector, initial_size, type_dir) );
+    #ifdef FILESYS_DEBUG
+  printf("filesyscreate: success1: %d\n", success);
+  #endif
+  success = dir_add (dir, parsed_name, inode_sector);
+    #ifdef FILESYS_DEBUG
+  printf("filesyscreate: success2: %d\n", success);
+  #endif
+
   if (!success && inode_sector != 0) 
     free_map_release (inode_sector, 1);
 
@@ -88,6 +97,7 @@ filesys_create (const char *name, off_t initial_size, bool type_dir)
     inode_close(inode);
   }
   dir_close (dir);
+  inode_close(inode);
   }
   #ifdef FILESYS_DEBUG
 
@@ -105,7 +115,7 @@ struct file*
 filesys_open (const char *name, bool type_dir)
 {
     #ifdef FILESYS_DEBUG
-  printf("filesysopen\n");
+  printf("filesysopen: name: %s\n", name);
   #endif
 
   // Check for "" file name
@@ -115,10 +125,15 @@ filesys_open (const char *name, bool type_dir)
   struct inode *inode = NULL;
   char parsed_name[100];
 
-  // Check if file name is over da limit
+
+  bool success = filesys_find_dir(name, &inode, &dir, NULL, parsed_name);
+
+    // Check if file name is over da limit
   if(strlen(parsed_name) > 14)
     return NULL;
-  bool success = filesys_find_dir(name, &inode, &dir, NULL, parsed_name);
+  #ifdef FILESYS_DEBUG
+  printf("Filesysopen: filesysfind succ %d| parsedname:%s\n", success, parsed_name);
+  #endif
   if(success)
   {
   #ifdef FILESYS_DEBUG
@@ -138,6 +153,10 @@ filesys_open (const char *name, bool type_dir)
       {
         return file_open(inode);
       }
+      else
+      {
+        return NULL;
+      }
   }
 
   else
@@ -153,7 +172,7 @@ filesys_open (const char *name, bool type_dir)
   dir_close (dir);
 
   }
-  return NULL;
+  return (struct file*) dir;
 
 }
 
@@ -189,14 +208,16 @@ filesys_find_dir(const char* name,
 
   if(dir == NULL)
     dir = dir_open_root();
-
+  #ifdef FILESYS_DEBUG
+  printf("filesys find: i = %d", argv[0]);
+  #endif
 
   int i = 2;
   struct inode * inode = NULL;
   for(i = 2; i < argv[0] -1; i++)
   {
       #ifdef FILESYS_DEBUG
-    printf("filesys find dir in for\n");
+    printf("filesys find dir in for %s", argv[i]);
       #endif 
 
     inode = NULL;
@@ -221,6 +242,9 @@ filesys_find_dir(const char* name,
             &inode);
       if(found)
       {
+          #ifdef FILESYS_DEBUG
+      printf(" and look it up\n");
+      #endif
       dir_close(dir);
       dir = dir_open(inode);
       }

@@ -97,8 +97,8 @@
 	pass tests/filesys/base/syn-remove
 	pass tests/filesys/base/syn-write
 	FAIL tests/filesys/extended/dir-empty-name
-	FAIL tests/filesys/extended/dir-mk-tree
-	FAIL tests/filesys/extended/dir-mkdir
+	pass tests/filesys/extended/dir-mk-tree
+	pass tests/filesys/extended/dir-mkdir
 	FAIL tests/filesys/extended/dir-open
 	pass tests/filesys/extended/dir-over-file
 	FAIL tests/filesys/extended/dir-rm-cwd
@@ -142,8 +142,7 @@
 	FAIL tests/filesys/extended/grow-tell-persistence
 	FAIL tests/filesys/extended/grow-two-files-persistence
 	FAIL tests/filesys/extended/syn-rw-persistence
-	42 of 121 tests failed.
-
+	40 of 121 tests failed.
 
 
 ## Make Grade Output
@@ -153,16 +152,17 @@
 
 	Test Set                                      Pts Max  % Ttl  % Max
 	--------------------------------------------- --- --- ------ ------
-	tests/filesys/extended/Rubric.functionality     1/ 34   0.9%/ 30.0%
+	tests/filesys/extended/Rubric.functionality     5/ 34   4.4%/ 30.0%
 	tests/filesys/extended/Rubric.robustness        3/ 10   4.5%/ 15.0%
 	tests/filesys/extended/Rubric.persistence       0/ 23   0.0%/ 20.0%
 	tests/filesys/base/Rubric                      30/ 30  20.0%/ 20.0%
 	tests/userprog/Rubric.functionality           108/111   9.7%/ 10.0%
 	tests/userprog/Rubric.robustness               88/ 88   5.0%/  5.0%
 	--------------------------------------------- --- --- ------ ------
-	Total                                                  40.1%/100.0%
+	Total                                                  43.6%/100.0%
 
 	- - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - 
+
 
 
 

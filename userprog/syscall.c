@@ -8,6 +8,7 @@
 #include "userprog/process.h"
 #include "filesys/filesys.h"
 #include "threads/synch.h"
+#include "filesys/directory.h"
 
 
 
@@ -250,7 +251,23 @@ syscall_handler (struct intr_frame *f) //UNUSED)
 					exit(-1, f);
 			}
 
-			f->eax = filesys_create(name, 0, true);
+			f->eax = filesys_create(name, 16*sizeof (struct dir_entry), true);
+			break;
+
+	    }
+
+	    case SYS_CHDIR:
+	    {
+	        name = *(stack_ptr + 1);
+			if (name == NULL) { //Check for a non-existant file of course
+				exit(-1, f);
+			}
+			else {
+				if(get_user(name) == -1) // check if pointer to name is actually valid
+					exit(-1, f);
+			}
+
+			f->eax = filesys_open(name, true) != NULL ? true : false;
 			break;
 
 	    }
