@@ -66,7 +66,7 @@ filesys_create (const char *name, off_t initial_size, bool type_dir)
   struct dir *dir = NULL;
   struct inode *inode = NULL;
   char parsed_name[512];
-  bool success = filesys_find_dir(name, &inode, &dir, &inode_sector, parsed_name);
+  bool success = filesys_find_dir(name, &inode, &dir, &parent_sector, parsed_name);
 
   // Check if parsed name is bigger than allowed by pintos
   if(strlen(parsed_name) > 14)
