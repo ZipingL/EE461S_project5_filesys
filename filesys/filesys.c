@@ -151,9 +151,11 @@ filesys_open (const char *name, bool type_dir, bool* warning)
   {
       bool found = dir_lookup (dir, parsed_name,
             &inode);
+
         #ifdef FILESYS_DEBUG
           printf("Check me %d", found);
           #endif
+
 
       if(found)
       {

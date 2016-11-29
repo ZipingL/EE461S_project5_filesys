@@ -273,6 +273,14 @@ syscall_handler (struct intr_frame *f) //UNUSED)
 
 	    }
 
+
+		case SYS_ISDIR:
+		{
+			fd = *(stack_ptr + 1);
+			f->eax = filesize_get(fd);
+			break;
+		}
+
 		default:
 		{
 			//#ifdef PROJECT2_DEBUG
