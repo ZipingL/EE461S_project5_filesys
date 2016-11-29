@@ -233,7 +233,9 @@ process_exit (int exit_status)
 
        // Close the file if it actually is one
        if(element->warning == false)
-       file_close(element->fp);
+       {
+        file_close(element->fp);
+       }
        free(element);
      }
   // Now free the file pointer to the code the user program ran on

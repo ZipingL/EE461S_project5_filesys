@@ -72,6 +72,10 @@ filesys_create (const char *name, off_t initial_size, bool type_dir)
   if(strlen(parsed_name) > 14)
     return false;
 
+  // Check if the directory to create file/dir in exists
+  if(dir->inode->removed)
+    return false;
+
 
   #ifdef FILESYS_DEBUG
   printf("filesys find succ %d parsed name %s\n", success, parsed_name);
@@ -80,13 +84,13 @@ filesys_create (const char *name, off_t initial_size, bool type_dir)
   // Add the file/dir to the specifieddirectory
   success = (dir != NULL
                   && free_map_allocate (1, &inode_sector)
-                  && inode_create (inode_sector, initial_size, type_dir) );
+                  && inode_create (inode_sector, initial_size, type_dir));
     #ifdef FILESYS_DEBUG
   printf("filesyscreate: success1: %d\n", success);
   #endif
   success = dir_add (dir, parsed_name, inode_sector);
     #ifdef FILESYS_DEBUG
-  printf("filesyscreate: success2: %d\n", success);
+  printf("filesyscreate: success2: %d added to %p\n", success, dir);
   #endif
 
   if (!success && inode_sector != 0) 
@@ -102,8 +106,8 @@ filesys_create (const char *name, off_t initial_size, bool type_dir)
     inode_edit_parent(parent_sector, inode);
     inode_close(inode);
   }
-  dir_close (dir);
-  inode_close(inode);
+  //dir_close (dir);
+  //inode_close(inode);
   }
   #ifdef FILESYS_DEBUG
 
@@ -131,8 +135,9 @@ filesys_open (const char *name, bool type_dir, bool* warning)
   struct inode *inode = NULL;
   char parsed_name[100];
 
-
+  // Parse the full path name
   bool success = filesys_find_dir(name, &inode, &dir, NULL, parsed_name);
+
 
     // Check if file name is over da limit
   if(strlen(parsed_name) > 14)
@@ -142,59 +147,100 @@ filesys_open (const char *name, bool type_dir, bool* warning)
   #endif
   if(success)
   {
-  #ifdef FILESYS_DEBUG
-  printf("open inode %p\n", inode);
-  printf("open dir %p\n", dir);
-  #endif
+    #ifdef FILESYS_DEBUG
+    printf("open inode %p\n", inode);
+    printf("open dir %p\n", dir);
+    #endif
 
-  if(!type_dir)
-  {
-      bool found = dir_lookup (dir, parsed_name,
-            &inode);
-
-        #ifdef FILESYS_DEBUG
-          printf("Check me %d", found);
-          #endif
-
-
-      if(found)
-      {
-
-        // Tell caller user is trying to open a directory as a file
-        // if the caller cares (syscal will care)
-        if(inode->type_dir == true)
+    // Condition is hit when user tries to open directory or file using open
+    if(!type_dir)
+    {
+        bool found = false;
+        // Handle Edge case where file name is "/"
+        if(name[0] == 47 && name[1] == NULL) // '/' == ascii dec:47
         {
-          if(warning)
-            *warning = true;
-          return (struct file*) dir;
+          found = true;
+        }
+        else 
+        {
+          found = dir_lookup (dir, parsed_name,
+              &inode);
         }
 
-        return file_open(inode);
+          #ifdef FILESYS_DEBUG
+            printf("Check me %d", found);
+            #endif
+
+
+        if(found)
+        {
+
+          // Tell caller user is trying to open a directory using open
+          // if the caller cares (syscal will care)
+          if(inode->type_dir == true)
+          {
+            // Make sure the directory/file actually exists
+            if(inode->removed)
+            {
+              inode_close(inode);
+              return NULL;
+            }
+
+            if(warning)
+              *warning = true;
+            return (struct file*) dir_open(inode);
+          }
+
+          return file_open(inode);
 
       }
       else
       {
         return NULL;
       }
+    }
+    // Condition is hit when user changes directory (syscall chdir)
+    else
+    {
+      bool found = false;
+            // Handle Edge case where directory name is "/"
+        if(name[0] == 47 && name[1] == NULL) // '/' == ascii dec:47
+        {
+          found = true;
+        }
+        else
+        {
+          found = dir_lookup (dir, parsed_name,
+              &inode);
+        }
+        if(found)
+        {
+            // Make sure the directory/file actually exists
+            if(inode->removed)
+            {
+              inode_close(inode);
+              return NULL;
+            }
+        struct dir* dir = dir_open(inode);
+
+        thread_current()->cd.cd_dir = dir;
+        return (struct file*) dir;
+        }
+    }
+
   }
 
-  else
-  {
-      bool found = dir_lookup (dir, parsed_name,
-            &inode);
-      if(found)
-      {
-      struct dir* dir = dir_open(inode);
-      thread_current()->cd.cd_dir = dir;
-      }
-  }
-  dir_close (dir);
-
-  }
-  return (struct file*) dir;
 
 }
 
+/* Takes in a full path to a directory or file
+   and then parses such that
+   it returns the requested directory/file's inode
+   in return_inode
+   and returns the directory that the requested
+   directory or file in return_dir
+   and returns the directory/file's name only (no paths)
+   in parsed_name */
 bool
 filesys_find_dir(const char* name,
                  struct inode** return_inode,
@@ -219,11 +265,19 @@ filesys_find_dir(const char* name,
   block_sector_t return_parent_sector = ROOT_DIR_SECTOR;
 
   // Open the correct dir to create the file/dir in
+      #ifdef FILESYS_DEBUG
+  printf("filesysfind name %s\n", name);
+  #endif
   struct dir* dir = NULL;
   if((bool) argv[1] == true)
     dir = dir_open_root();
   else
+  {
+        #ifdef FILESYS_DEBUG
+    printf("Using cd not root\n");
+    #endif
     dir = t->cd.cd_dir;
+  }
 
   if(dir == NULL)
     dir = dir_open_root();
@@ -236,7 +290,7 @@ filesys_find_dir(const char* name,
   for(i = 2; i < argv[0] -1; i++)
   {
       #ifdef FILESYS_DEBUG
-    printf("filesys find dir in for %s", argv[i]);
+    printf("filesys find dir in %dfor %s\n", i, argv[i]);
       #endif 
 
     inode = NULL;
@@ -276,8 +330,21 @@ filesys_find_dir(const char* name,
 
   }
   #ifdef FILESYS_DEBUG
-  printf("find inode%p", inode);
+  printf("find inode%p\n find dir %p\n", inode,dir);
   #endif
+
+  // Return the root directory's inode
+  // in the edge case where the name is "/"
+  if(name[0] == 47 && name[1] == NULL)
+  {
+    inode = dir->inode;
+    dir = NULL; // recall that dir 
+    // holds the parent directory
+    // of the requested file/directory
+    // since root has no parent dir,
+    // dir is set to false
+  }
+
   if(return_inode)
     *return_inode = inode;
   if(return_dir)
@@ -372,7 +439,7 @@ filesys_remove (const char *name)
 
   if(success)
   {
-    // Check if file name is over da limit
+  // Check if file name is over da limit
   
   if(strlen(parsed_name) > 14)
     return NULL;
@@ -390,7 +457,7 @@ do_format (void)
 {
   printf ("Formatting file system...");
   free_map_create ();
-  if (!dir_create (ROOT_DIR_SECTOR, 16))
+  if (!dir_create(ROOT_DIR_SECTOR, 16))
     PANIC ("root directory creation failed");
   free_map_close ();
   printf ("done.\n");

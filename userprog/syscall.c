@@ -9,6 +9,7 @@
 #include "filesys/filesys.h"
 #include "threads/synch.h"
 #include "filesys/directory.h"
+#include "filesys/inode.h"
 
 
 
@@ -241,6 +242,11 @@ syscall_handler (struct intr_frame *f) //UNUSED)
 	    	break;
 	    }
 
+	    /*Creates the directory named dir, which may be relative or absolute. 
+	    Returns true if successful, false on failure. Fails if dir already exists 
+	    or if any directory name in dir, besides the last, does not already exist. 
+	    That is, mkdir("/a/b/c") succeeds only 
+	    if /a/b already exists and /a/b/c does not.*/
 	    case SYS_MKDIR:
 	    {
 	    	name = *(stack_ptr + 1);
@@ -256,7 +262,9 @@ syscall_handler (struct intr_frame *f) //UNUSED)
 			break;
 
 	    }
-
+	    /*
+	    Changes the current working directory of the process to dir, which may be 
+	    relative or absolute. Returns true if successful, false on failure.*/
 	    case SYS_CHDIR:
 	    {
 	        name = *(stack_ptr + 1);
@@ -273,12 +281,114 @@ syscall_handler (struct intr_frame *f) //UNUSED)
 
 	    }
 
-
+	    /*Returns true if fd represents a directory, 
+	    false if it represents an ordinary file.*/
 		case SYS_ISDIR:
 		{
 			fd = *(stack_ptr + 1);
-			f->eax = filesize_get(fd);
+			struct thread* current_thread = thread_current();
+			struct list_elem* e = find_fd_element(fd, current_thread);
+			if(e == NULL) // This should never happen
+			{ 
+				f->eax = false; // Directory doesn't exist
+			}
+			else
+			{
+				struct  fd_list_element *fd_element = 
+				list_entry (e, struct fd_list_element, elem_fd);
+				f->eax = fd_element->warning;
+			}
 			break;
+		}
+
+		/*Returns the inode number of the inode associated with fd, 
+		which may represent an ordinary file or a directory.
+		An inode number persistently identifies a file or directory. 
+		It is unique during the file's existence. In Pintos, 
+		the sector number of the inode is suitable for use as an inode number*/
+		case SYS_INUMBER:
+		{
+			fd = *(stack_ptr + 1);
+			struct thread* current_thread = thread_current();
+			struct list_elem* e = find_fd_element(fd, current_thread);
+			if(e == NULL) // This should never happen
+			{ 
+				f->eax = -1; // Directory doesn't exist
+			}
+			else
+			{
+				struct  fd_list_element *fd_element = 
+				list_entry (e, struct fd_list_element, elem_fd);
+				struct dir* dir = (struct dir*) fd_element->fp;
+				f->eax = dir->inode->sector;
+			}
+			break;
+		}
+		/*
+		Reads a directory entry from file descriptor fd, 
+		which must represent a directory. If successful, 
+		stores the null-terminated file name in name, which must 
+		have room for READDIR_MAX_LEN + 1 bytes, and returns true. 
+		If no entries are left in the directory, returns false.
+		. and .. should not be returned by readdir.
+
+		If the directory changes while it is open, 
+		then it is acceptable for some entries not to be read at all 
+		or to be read multiple times. Otherwise, each directory entry 
+		should be read once, in any order. 
+
+		READDIR_MAX_LEN is defined in lib/user/syscall.h.
+		 If your file system supports longer file names than the 
+		 basic file system, you should increase this value from the default of 14.
+		 */
+		case SYS_READDIR:
+		{
+			fd = *(stack_ptr + 1);
+		    name = *(stack_ptr + 2);
+		    if (name == NULL) { //Check for a non-existant file of course
+				exit(-1, f);
+			}
+			else {
+				if(get_user(name) == -1) // check if pointer to name is actually valid
+					exit(-1, f);
+			}
+			struct thread* current_thread = thread_current();
+			struct list_elem* e = find_fd_element(fd, current_thread);
+			if(e == NULL) // This should never happen
+			{ 
+				f->eax = -1; // Directory doesn't exist
+			}
+			else
+			{
+				struct  fd_list_element *fd_element = 
+				list_entry (e, struct fd_list_element, elem_fd);
+				if(fd_element->warning) 
+				{
+					struct dir* dir = (struct dir*) fd_element->fp;
+					/* Reads the next directory entry in DIR and stores the name in
+	   				NAME.  Returns true if successful, false if the directory
+	   				contains no more entries. */
+	                f->eax = dir_readdir (dir, name);
+
+	                /* For Debugging
+	                printf("readdir name %s %p\n", name, dir);
+	                printf("current_thread: cd: %p\n", current_thread->cd.cd_dir);
+
+	                char name2[20];
+	                struct thread* current_thread2 = thread_current();
+					struct list_elem* e2 = find_fd_element(2, current_thread2);
+									struct  fd_list_element *fd_element2 = 
+				  list_entry (e2, struct fd_list_element, elem_fd);
+	              dir_readdir((struct dir*)fd_element2->fp, name2);
+	              printf("readdir name2 %p %s\n",fd_element2->fp, name2);*/
+
+	            }
+	            else
+	            {
+	                f->eax = -1; // fd does not represent a directory
+	            }
+			}
+		break;
 		}
 
 		default:

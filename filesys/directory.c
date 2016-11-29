@@ -13,7 +13,6 @@
 bool
 dir_create (block_sector_t sector, size_t entry_cnt)
 {
-  printf("hello\n");
   return inode_create (sector, entry_cnt * sizeof (struct dir_entry), true);
 }
 
@@ -201,6 +200,26 @@ dir_remove (struct dir *dir, const char *name)
   if (inode == NULL)
     goto done;
 
+  /* Make sure if inode is directory, it is empty */
+  bool not_empty = false;
+  if(inode->type_dir)
+  {
+    struct dir_entry e;
+    off_t pos = 0;
+    while (inode_read_at (inode, &e, sizeof e, pos) == sizeof e) 
+    {
+      pos += sizeof e;
+      if (e.in_use)
+        {
+          not_empty = true;
+          break;
+        } 
+    }
+
+    if(not_empty)
+      goto done;
+  }
+
   /* Erase directory entry. */
   e.in_use = false;
   if (inode_write_at (dir->inode, &e, sizeof e, ofs) != sizeof e) 
@@ -209,7 +228,6 @@ dir_remove (struct dir *dir, const char *name)
   /* Remove inode. */
   inode_remove (inode);
   success = true;
-
  done:
   inode_close (inode);
   return success;
@@ -222,7 +240,6 @@ bool
 dir_readdir (struct dir *dir, char name[NAME_MAX + 1])
 {
   struct dir_entry e;
-
   while (inode_read_at (dir->inode, &e, sizeof e, dir->pos) == sizeof e) 
     {
       dir->pos += sizeof e;
