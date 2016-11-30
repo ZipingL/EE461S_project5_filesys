@@ -75,14 +75,27 @@ inode_create (block_sector_t sector, off_t length, bool type_dir)
       disk_inode->type_dir = type_dir;
       disk_inode->parent = ROOT_DIR_SECTOR;
 
+	  for (int i = 0; i < 121; i++) { //This helps us determine if a block has been allocated or not
+		disk_inode->direct[j] = -1;
+	  }
+
       for (int i = 0; i < sectors; i++) { //You know how many sectors need to be allocated 
         { for (int j = 0; j < 121; j++) {
-			 free_map_allocate(1, disk_inode->direct[j]); //Now we just allocate a sector and the direct table holds a pointer to the allocated sector
-			 length = length - 512; //Every allocation means we have taken care of 512 of the bytes that need to be written to
-			 if (length <= 0) {
-			   break; //If there is no need to allocate more space, just stop allocating
+			 if (disk_inode->direct[j] == -1) { //Check that we are writing to a free entry
+			 	free_map_allocate(1, disk_inode->direct[j]); //Now we just allocate a sector and the direct table holds a pointer to the allocated sector
+				length = length - 512; //Every allocation means we have taken care of 512 of the bytes that need to be written to
+			 	if (length <= 0) {
+			  	 break; //If there is no need to allocate more space, just stop allocating
+			 	}
 			 }
 		  } //Now the direct block table is filled
+		  if (length > 0) {
+			success = false; //We were not able to allocate enough
+		  }
+		  else { //Allocation was successful
+			success = true;
+		  }
+		  block_write(fs_device, sector, disk_inode); //And now we update the copy of the inode disk
 
 		  //Will end up doing something similar for the indirect and double indirect pointers
 		  /*
