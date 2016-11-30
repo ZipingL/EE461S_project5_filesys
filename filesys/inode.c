@@ -55,26 +55,39 @@ inode_init (void)
 bool
 inode_create (block_sector_t sector, off_t length, bool type_dir)
 {
+  //The sectors all need to be allocated here. Always allocate enough for the file size of length n
   struct inode_disk *disk_inode = NULL;
   bool success = false;
 
 
   ASSERT (length >= 0);
+  printf("%u", sizeof *disk_inode);
 
   /* If this assertion fails, the inode structure is not exactly
      one sector in size, and you should fix that. */
   ASSERT (sizeof *disk_inode == BLOCK_SECTOR_SIZE);
 
-  disk_inode = calloc (1, sizeof *disk_inode);
+  disk_inode = calloc (1, sizeof *disk_inode); //Now we need to format the inode on disk
   if (disk_inode != NULL)
     {
-      size_t sectors = bytes_to_sectors (length);
+      size_t sectors = bytes_to_sectors (length); //Takes the file length and determines how many sectors need to be allocated
       disk_inode->length = length;
       disk_inode->magic = INODE_MAGIC;
       disk_inode->type_dir = type_dir;
       disk_inode->parent = ROOT_DIR_SECTOR;
       if (free_map_allocate (sectors, &disk_inode->start)) 
-        {
+        { static char zeros[BLOCK_SECTOR_SIZE]; //A zeroed out array that could prove useful
+		  for (int i = 0; i < 121; i++) {
+			 free_map_allocate(1, direct[i]); //Now we just allocate a sector and the direct table holds a pointer to the allocated sector
+			 block_write(fs_device, direct[i], zeros); //Make a call to block_write to zero out the data in each allocated sector
+			 length = length - 512; //Every allocation means we have taken care of 512 of the bytes that need to be written to
+			 if (length <= 0) {
+			   break; //If there is no need to allocate more space, just stop allocating
+			 }
+		  } //Now the direct block table is filled
+
+		  //Will end up doing something similar for the indirect and double indirect pointers
+		  /*
           block_write (fs_device, sector, disk_inode);
           if (sectors > 0) 
             {
@@ -84,7 +97,7 @@ inode_create (block_sector_t sector, off_t length, bool type_dir)
               for (i = 0; i < sectors; i++) 
                 block_write (fs_device, disk_inode->start + i, zeros);
             }
-          success = true; 
+          success = true; */ 
         } 
       free (disk_inode);
   }

@@ -101,7 +101,7 @@ struct thread
     /* Shared between thread.c and synch.c. */
     struct list_elem elem;              /* List element. */
 
-#ifdef USERPROG
+//#ifdef USERPROG
 
     char full_name[40];
     struct list child_list;     /* Every thread has its own list of children */
@@ -114,7 +114,7 @@ struct thread
    struct child_list_elem *child_data; //Child can update its status for parent to see
 
    struct current_directory cd;
-#endif
+//#endif
 
     /* Owned by thread.c. */
     unsigned magic;                     /* Detects stack overflow. */
