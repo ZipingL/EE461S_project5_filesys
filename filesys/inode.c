@@ -84,7 +84,7 @@ inode_create (block_sector_t sector, off_t length, bool type_dir)
       for (int i = 0; i < sectors; i++) { //You know how many sectors need to be allocated 
         { for (int j = 0; j < DIRECT_BLOCK_SIZE; j++) {
 			 if (disk_inode->direct[j] == -1) { //Check that we are writing to a free entry
-			 	free_map_allocate(1, disk_inode->direct[j]); //Now we just allocate a sector and the direct table holds a pointer to the allocated sector
+			 	free_map_allocate(1, &disk_inode->direct[j]); //Now we just allocate a sector and the direct table holds a pointer to the allocated sector
 				length = length - 512; //Every allocation means we have taken care of 512 of the bytes that need to be written to
 			 	if (length <= 0) {
 			  	 break; //If there is no need to allocate more space, just stop allocating
@@ -330,8 +330,8 @@ inode_write_at (struct inode *inode, const void *buffer_, off_t size,
 		if (inode->data.numDirect == 0) { //If no blocks have been written to
 		  i = 0;
 		}
-		else { //You want to start writing at numDirect + 1
-		  i = inode->data.numDirect + 1;
+		else { //You want to start writing at numDirect
+		  i = inode->data.numDirect;
 		}
 		if (inode->data.numDirect == DIRECT_BLOCK_SIZE) { //If all the direct blocks have been allocated
 		  return 0; //Then there is no space to write so return 0
@@ -343,10 +343,13 @@ inode_write_at (struct inode *inode, const void *buffer_, off_t size,
 		  inode->data.numDirect++; //To show that a block has been allocated
 		}
 		else { //We only have to write to a single remaining sector
-		  block_write(fs_device, inode->data.direct[sector_idx], buffer); //Write the remaining bytes
+		  block_write(fs_device, inode->data.direct[inode->data.numDirect], buffer); //Write the remaining bytes
 		  size -= chunk_size; //Of course, update size to reflect that all the bytes have been written
 		  bytes_written += chunk_size; //Update how many bytes were written
 		  inode->data.numDirect++; //To show that a block has been allocated
+		}
+		if (size <= 0) { //If we are done writing to blocks
+		  break; //Get out of the loop
 		}
 	  } //So now the direct blocks are filled up
 	}
