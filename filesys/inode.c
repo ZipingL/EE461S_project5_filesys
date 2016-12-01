@@ -7,6 +7,7 @@
 #include "filesys/free-map.h"
 #include "threads/malloc.h"
 //#define FILESYS_DEBUG_2
+#define DIRECT_BLOCK_SIZE 121
 
 /* Identifies an inode. */
 #define INODE_MAGIC 0x494e4f44
@@ -74,13 +75,14 @@ inode_create (block_sector_t sector, off_t length, bool type_dir)
       disk_inode->magic = INODE_MAGIC;
       disk_inode->type_dir = type_dir;
       disk_inode->parent = ROOT_DIR_SECTOR;
+	  disk_inode->numDirect = 0; //To show no blocks have been written to
 
-	  for (int i = 0; i < 121; i++) { //This helps us determine if a block has been allocated or not
-		disk_inode->direct[j] = -1;
+	  for (int i = 0; i < DIRECT_BLOCK_SIZE; i++) { //This helps us determine if a block has been allocated or not
+		disk_inode->direct[i] = -1;
 	  }
 
       for (int i = 0; i < sectors; i++) { //You know how many sectors need to be allocated 
-        { for (int j = 0; j < 121; j++) {
+        { for (int j = 0; j < DIRECT_BLOCK_SIZE; j++) {
 			 if (disk_inode->direct[j] == -1) { //Check that we are writing to a free entry
 			 	free_map_allocate(1, disk_inode->direct[j]); //Now we just allocate a sector and the direct table holds a pointer to the allocated sector
 				length = length - 512; //Every allocation means we have taken care of 512 of the bytes that need to be written to
@@ -88,7 +90,8 @@ inode_create (block_sector_t sector, off_t length, bool type_dir)
 			  	 break; //If there is no need to allocate more space, just stop allocating
 			 	}
 			 }
-		  } //Now the direct block table is filled
+		  }
+	   } //Now the direct block table is filled
 		  if (length > 0) {
 			success = false; //We were not able to allocate enough
 		  }
@@ -198,9 +201,13 @@ inode_close (struct inode *inode)
       /* Deallocate blocks if removed. */
       if (inode->removed) 
         {
-          free_map_release (inode->sector, 1);
-          free_map_release (inode->data.start,
-                            bytes_to_sectors (inode->data.length)); 
+		 for (int i = 0; i < DIRECT_BLOCK_SIZE; i++) {
+			if (inode->data.direct[i] != -1) { //If we have allocated a direct pointer
+			  free_map_release(inode->data.direct[i], 1); //Release the allocated block
+			}
+		 }  
+         free_map_release (inode->sector, 1);
+         free_map_release (inode->data.start, bytes_to_sectors (inode->data.length)); 
         }
 
       free (inode); 
@@ -225,13 +232,38 @@ inode_read_at (struct inode *inode, void *buffer_, off_t size, off_t offset)
   uint8_t *buffer = buffer_;
   off_t bytes_read = 0;
   uint8_t *bounce = NULL;
+  bool readable = false; //Checks if you can read from the requested sector
 
-  while (size > 0) 
-    {
-      /* Disk sector to read, starting byte offset within sector. */
-      block_sector_t sector_idx = byte_to_sector (inode, offset);
-      int sector_ofs = offset % BLOCK_SECTOR_SIZE;
+  /* Disk sector to read, starting byte offset within sector. */
+  block_sector_t sector_idx = byte_to_sector (inode, offset);
+  int sector_ofs = offset % BLOCK_SECTOR_SIZE;
 
+ while (size > 0) 
+    { /*
+	  int chunk_size = 512; //How many bytes you can read from a sector
+
+	  for (int i = 0; i < DIRECT_BLOCK_SIZE; i++) { //Now we read from the allocated blocks
+		for (int j = 0; j < DIRECT_BLOCK_SIZE; j++) {
+		  if (inode->data->direct[j] == sector_idx) { //If we can find the sector to read from
+			readable = true; //You can read from the sector
+		  }
+		}
+		if (readable == false) { //If you cannot read from the sector
+		  return 0; //No bytes were read
+		}
+		if (size > chunk_size) { //If the number of bytes to be read is too many to read from a single sector
+		  block_read(fs_device, inode->data->direct[i], chunk_size); //Read 512 bytes
+		  size -= chunk_size; //So 512 bytes have already been read
+		  bytes_read += chunk_size; //Update how many bytes were read
+		}
+		else { //We only have to read from a single sector
+		  block_write(fs_device, inode->data->direct[sector_idx], buffer); //Read from the sector
+		  size -= chunk_size; //Of course, update size to reflect that all the bytes have been read
+		  bytes_read += chunk_size; //Update how many bytes were read
+		}
+	  } //So now the direct blocks are filled up */
+	
+	  
       /* Bytes left in inode, bytes left in sector, lesser of the two. */
       off_t inode_left = inode_length (inode) - offset;
       int sector_left = BLOCK_SECTOR_SIZE - sector_ofs;
@@ -290,21 +322,35 @@ inode_write_at (struct inode *inode, const void *buffer_, off_t size,
   while (size > 0) 
     {
       /* Sector to write, starting byte offset within sector. */
-      block_sector_t sector_idx = byte_to_sector (inode, offset); //Determines which sector to write to
+      block_sector_t sector_idx = byte_to_sector (inode, offset); //Determines how many more sectors to write to
       int sector_ofs = offset % BLOCK_SECTOR_SIZE; //Where within the sector to write to
 	  int chunk_size = 512; //This is how many bytes can be written to the block at once
 
-	  for (int i = 0; i < sector_idx; i++) { //Now we write to the sectors using the direct blocks
+	  for (int i = 0; i < DIRECT_BLOCK_SIZE; i++) { //Now we write to the sectors using the direct blocks
+		if (inode->data.numDirect == 0) { //If no blocks have been written to
+		  i = 0;
+		}
+		else { //You want to start writing at numDirect + 1
+		  i = inode->data.numDirect + 1;
+		}
+		if (inode->data.numDirect == DIRECT_BLOCK_SIZE) { //If all the direct blocks have been allocated
+		  return 0; //Then there is no space to write so return 0
+	 	}
 		if (size > chunk_size) { //If the number of bytes to be written is too many to write to a single sector
-		  block_write(fs_device, direct[i], data->buffer); //Pretty sure we have to modify the buffer, as that is what I am writing to the block, and it may be too large
+		  block_write(fs_device, inode->data.direct[i], buffer); //Pretty sure we have to modify the buffer, as that is what I am writing to the block, and it may be too large
 		  size -= chunk_size; //So 512 bytes have already been written
+		  bytes_written += chunk_size; //Update how many bytes were written
+		  inode->data.numDirect++; //To show that a block has been allocated
 		}
 		else { //We only have to write to a single remaining sector
-		  block_write(fs_device, direct[sector_idx], data->buffer); //Write the remaining bytes
+		  block_write(fs_device, inode->data.direct[sector_idx], buffer); //Write the remaining bytes
 		  size -= chunk_size; //Of course, update size to reflect that all the bytes have been written
+		  bytes_written += chunk_size; //Update how many bytes were written
+		  inode->data.numDirect++; //To show that a block has been allocated
 		}
 	  } //So now the direct blocks are filled up
 	}
+	return bytes_written;
 		  
 	  /*
       /* Bytes left in inode, bytes left in sector, lesser of the two.
@@ -347,9 +393,9 @@ inode_write_at (struct inode *inode, const void *buffer_, off_t size,
       size -= chunk_size;
       offset += chunk_size;
       bytes_written += chunk_size;*/
-    }
-  free (bounce);
-  return bytes_written;
+    //}
+  //free (bounce);
+  //return bytes_written;
 }
 
 /* Disables writes to INODE.

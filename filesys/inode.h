@@ -17,7 +17,8 @@ struct inode_disk
     block_sector_t parent;
     bool type_dir;
     unsigned magic;                     /* Magic number. */
-	block_sector_t direct[121];			/* Holds pointers to free sectors */
+	uint32_t numDirect;					/* Number of allocated direct blocks */
+	block_sector_t direct[120];			/* Holds pointers to free sectors */
 	block_sector_t indirect_ptr;		/* Holds a pointer to a sector that will point to free sectors */
 	block_sector_t* db_indirect_ptr;	/* Points to a sector that points to a sector that points to free blocks (?) */
     //uint32_t unused[120];             /* Not used. If you add a field, subtract one from the array size */
