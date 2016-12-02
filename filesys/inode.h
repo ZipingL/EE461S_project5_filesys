@@ -34,6 +34,7 @@ struct inode
     int open_cnt;                       /* Number of openers. */
     bool removed;                       /* True if deleted, false otherwise. */
     int deny_write_cnt;                 /* 0: writes ok, >0: deny writes. */
+	off_t length;						/* The same as the length in inode_disk */
     struct inode_disk data;             /* Inode content. */
   };
 

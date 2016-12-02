@@ -77,7 +77,7 @@ inode_create (block_sector_t sector, off_t length, bool type_dir)
       disk_inode->parent = ROOT_DIR_SECTOR;
 	  disk_inode->numDirect = 0; //To show no blocks have been written to
 
-	  /* After looking at sample code */
+	  
 
 	  for (int i = 0; i < DIRECT_BLOCK_SIZE; i++) { //This is where we actually allocate the sectors
 		if (sectors > 0) { //If there are still sectors to allocate
@@ -99,7 +99,7 @@ inode_create (block_sector_t sector, off_t length, bool type_dir)
 	free(disk_inode); //We're done with the inode on disk, so let's free it
 	return success; //Whether allocation was successful or not, we need to return whether we were successful or not
 
-	  /* End new implementation */
+	
 
 	  /*
 	  for (int i = 0; i < DIRECT_BLOCK_SIZE; i++) { //This helps us determine if a block has been allocated or not
@@ -186,6 +186,7 @@ inode_open (block_sector_t sector)
   inode->deny_write_cnt = 0;
   inode->removed = false;
   block_read (fs_device, inode->sector, &inode->data);
+  inode->length = inode->data.length; //The inode needs to know how long the corresponding data is
   inode->parent = inode->data.parent;
   inode->type_dir = inode->data.type_dir;
   return inode;
@@ -227,16 +228,18 @@ inode_close (struct inode *inode)
       if (inode->removed) 
         {
 		 for (int i = 0; i < DIRECT_BLOCK_SIZE; i++) {
-			if (inode->data.direct[i] != -1) { //If we have allocated a direct pointer
-			  free_map_release(inode->data.direct[i], 1); //Release the allocated block
-			}
+			free_map_release(inode->data.direct[i], 1); //Just deallocate all the direct blocks
 		 }  
          free_map_release (inode->sector, 1);
          free_map_release (inode->data.start, bytes_to_sectors (inode->data.length)); 
-        }
+        } 
+	  else { //Save the state of the disk_inode to disk
+		block_write(fs_device, inode->sector, &inode->data); //This writes the state of the latest copy of the disk_inode to disk
+ 	  }
 
-      free (inode); 
     }
+
+  free (inode);
 }
 
 /* Marks INODE to be deleted when it is closed by the last caller who
@@ -352,7 +355,7 @@ inode_write_at (struct inode *inode, const void *buffer_, off_t size,
   while (size > 0) 
     {
       /* Sector to write, starting byte offset within sector. */
-      block_sector_t sector_idx = byte_to_sector (inode, offset); //Determines how many more sectors to write to
+      block_sector_t sector_idx = byte_to_sector (inode, offset); //Determines which sector to write to
       int sector_ofs = offset % BLOCK_SECTOR_SIZE; //Where within the sector to write to
 	  int chunk_size = 512; //This is how many bytes can be written to the block at once
 
