@@ -86,16 +86,18 @@ inode_create (block_sector_t sector, off_t length, bool type_dir)
 		  block_write(fs_device, disk_inode->direct[i], zeroes); //Now clean what is inside the allocated sector
 		  sectors--; //We know a sector has been allocated
 		  if (sectors == 0) { //If the sectors are all allocated
+			block_write(fs_device, sector, disk_inode); //Update the inode that is now on disk
 			success = true; //Then we allocated everything!
-			break; //Get out of here
 		  }
 		}
+
+	    if (success) { //If we have finished allocating
+		  break; //Exit the for loop
+	    }
 	  }
-		if (sectors == 0) { //An extra check to ensure that everything has been allocated
-		  block_write(fs_device, sector, disk_inode); //Update the inode that is now on disk
-		}
 	}
-		return success; //Whether allocation was successful or not, we need to return whether we were successful or not
+	free(disk_inode); //We're done with the inode on disk, so let's free it
+	return success; //Whether allocation was successful or not, we need to return whether we were successful or not
 
 	  /* End new implementation */
 
