@@ -31,10 +31,12 @@ static block_sector_t
 byte_to_sector (const struct inode *inode, off_t pos) 
 {
   ASSERT (inode != NULL);
-  if (pos < inode->data.length)
+  //if (pos < inode->data.length) {
     return inode->data.start + pos / BLOCK_SECTOR_SIZE;
-  else
-    return -1;
+  //}
+  //else {
+    //return -1;
+  //}
 }
 
 /* List of open inodes, so that opening a single inode twice
@@ -261,34 +263,39 @@ inode_read_at (struct inode *inode, void *buffer_, off_t size, off_t offset)
   off_t bytes_read = 0;
   uint8_t *bounce = NULL;
   bool readable = false; //Checks if you can read from the requested sector
+  block_sector_t sectorToReadFrom;
 
   /* Disk sector to read, starting byte offset within sector. */
   block_sector_t sector_idx = byte_to_sector (inode, offset);
   int sector_ofs = offset % BLOCK_SECTOR_SIZE;
 
+  for (int j = 0; j < DIRECT_BLOCK_SIZE; j++) {
+	if (inode->data.direct[j] == sector_idx) { //If we can find the sector to read from
+		sectorToReadFrom = j;
+		readable = true; //You can read from the sector
+		break;
+	}
+  }
+
+  if (readable == false) { //If you cannot read from the sector
+	return 0; //No bytes were read
+  }
+
  while (size > 0) 
     { 
 	  int chunk_size = 512; //How many bytes you can read from a sector
-
 	  for (int i = 0; i < DIRECT_BLOCK_SIZE; i++) { //Now we read from the allocated blocks
-		for (int j = 0; j < DIRECT_BLOCK_SIZE; j++) {
-		  if (inode->data.direct[j] == sector_idx) { //If we can find the sector to read from
-			readable = true; //You can read from the sector
-			break;
-		  }
-		}
-		if (readable == false) { //If you cannot read from the sector
-		  return 0; //No bytes were read
-		}
+		i = sectorToReadFrom; //So that you start reading from the correct sector
 		if (size > chunk_size) { //If the number of bytes to be read is too many to read from a single sector
 		  block_read(fs_device, inode->data.direct[i], chunk_size); //Read 512 bytes
 		  size -= chunk_size; //So 512 bytes have already been read
 		  bytes_read += chunk_size; //Update how many bytes were read
 		}
 		else { //We only have to read from a single sector
-		  block_write(fs_device, inode->data.direct[sector_idx], buffer); //Read from the sector
+		  block_read(fs_device, inode->data.direct[i], buffer); //Read from the sector
 		  size -= chunk_size; //Of course, update size to reflect that all the bytes have been read
 		  bytes_read += chunk_size; //Update how many bytes were read
+		  break;
 		}
 	  } //So now the direct blocks are filled up
  	}
