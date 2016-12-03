@@ -407,6 +407,7 @@ bool inode_expand(struct inode_disk *inode, off_t length) { //This will be the f
   bool success = false;
 
   int i = -1;
+  int old_numDirect = inode->numDirect;
   for (i = inode->numDirect; i < DIRECT_BLOCK_SIZE; i++) { //This is where we actually allocate the sectors
 	i = inode->numDirect; //Start at the next free block
 	if (sectors > 0) { //If there are still sectors to allocate
@@ -436,8 +437,8 @@ bool inode_expand(struct inode_disk *inode, off_t length) { //This will be the f
    /* Hypothetical Design:
     if(!success)
     { 
-      inode->length += (DIRECT_BLOCK_SIZE*512); // Update what we've expanded so far
-      int length_left = length - (DIRECT_BLOCK_SIZE*512); // Get the unexpanded length
+      inode->length += (DIRECT_BLOCK_SIZE*512 - old_numDirect*512); // Update what we've expanded so far
+      int length_left = length - (DIRECT_BLOCK_SIZE*512 - old_numDirect*512); // Get the unexpanded length
 
       // Expand the indirect, since direct is full
       // If indirect is full, inode_indirect_expand then call
