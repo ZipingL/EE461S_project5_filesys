@@ -106,7 +106,7 @@ filesys_create (const char *name, off_t initial_size, bool type_dir)
     inode_edit_parent(parent_sector, inode);
     inode_close(inode);
   }
-  dir_close (dir); // Close the directory in which we added the new file to (thus updating it on disk)
+ // dir_close (dir); // Close the directory in which we added the new file to (thus updating it on disk)
   //inode_close(inode);
   }
   #ifdef FILESYS_DEBUG
@@ -229,7 +229,7 @@ filesys_open (const char *name, bool type_dir, bool* warning)
     }
 
   }
-
+  return NULL;
 
 }
 
