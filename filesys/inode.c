@@ -6,7 +6,7 @@
 #include "filesys/filesys.h"
 #include "filesys/free-map.h"
 #include "threads/malloc.h"
-#define FILESYS_DEBUG_2
+//#define FILESYS_DEBUG_2
 #define DIRECT_BLOCK_SIZE 120
 
 /* Identifies an inode. */
@@ -317,7 +317,7 @@ inode_write_at (struct inode *inode, const void *buffer_, off_t size,
   if (inode->deny_write_cnt)
     return 0;
 
-  if (offset + size > inode_length(&inode)) { //If you are writing to a point past the inode
+  if (offset + size > inode_length(inode)) { //If you are writing to a point past the inode
 	inode->length = inode_extension(inode, offset + size); //Now you must extend the inode that exists before writing to it and alos update the length of the inode
   }
 
