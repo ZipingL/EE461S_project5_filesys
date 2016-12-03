@@ -6,6 +6,7 @@
 #include "filesys/inode.h"
 #include "threads/malloc.h"
 
+//#define DIRECTORY_DEBUG 1
 
 
 /* Creates a directory with space for ENTRY_CNT entries in the
@@ -52,7 +53,11 @@ dir_open_parent(struct dir * child_dir)
 struct dir *
 dir_open_root (void)
 {
-  return dir_open (inode_open (ROOT_DIR_SECTOR));
+  struct inode* inode_root = inode_open (ROOT_DIR_SECTOR);
+  #ifdef DIRECTORY_DEBUG
+  printf("dir open root: %p", inode_root);
+  #endif
+  return dir_open (inode_root);
 }
 
 /* Opens and returns a new directory for the same inode as DIR.

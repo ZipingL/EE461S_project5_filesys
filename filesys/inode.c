@@ -73,15 +73,13 @@ inode_create (block_sector_t sector, off_t length, bool type_dir)
   if (disk_inode != NULL)
     {
       size_t sectors = bytes_to_sectors (length); //Takes the file length and determines how many sectors need to be allocated
-      disk_inode->length = length;
+      disk_inode->length = 0; // Set the length to 0, as well will "expand it" with actual given length
       disk_inode->magic = INODE_MAGIC;
       disk_inode->type_dir = type_dir;
       disk_inode->parent = ROOT_DIR_SECTOR;
 	  disk_inode->numDirect = 0; //To show no blocks have been written to
-	  if (inode_expand(disk_inode, disk_inode->length)) { //If we allocated to the disk properly
-		#ifdef FILESYS_DEBUG_2
-		printf("The inode's direct blocks were allocated.");
-		#endif
+	  if (inode_expand(disk_inode, length)) { //If we allocated to the disk properly
+
 		block_write(fs_device, sector, disk_inode); //Update the inode that is now on disk
 		success = true;
 	  }
@@ -404,10 +402,10 @@ inode_length (const struct inode *inode)
 bool inode_expand(struct inode_disk *inode, off_t length) { //This will be the function to expand the blocks needed in inode_create
 
   static char zeroes[BLOCK_SECTOR_SIZE]; //An array of zeroes to "clean" the sector data
-  size_t sectors = bytes_to_sectors (length) - bytes_to_sectors(inode->length); //This determines the length by which you want to expand the current inode
+  int sectors = bytes_to_sectors (length);// - bytes_to_sectors(inode->length); //This determines the length by which you want to expand the current inode
   bool success = false;
 
-  for (int i = 0; i < DIRECT_BLOCK_SIZE; i++) { //This is where we actually allocate the sectors
+  for (int i = inode->numDirect; i < DIRECT_BLOCK_SIZE; i++) { //This is where we actually allocate the sectors
 	i = inode->numDirect; //Start at the next free block
 	if (sectors > 0) { //If there are still sectors to allocate
 	 //Well, let's allocate!
@@ -416,17 +414,21 @@ bool inode_expand(struct inode_disk *inode, off_t length) { //This will be the f
 	 sectors--; //We know a sector has been allocated
 	 inode->numDirect++; //Also increment the number of direct blocks allocated
 	}
+  /*
 	else if (sectors == 0) {
 	 free_map_allocate(1, &inode->direct[inode->numDirect]); //Now we just allocate a sector and the direct table holds a pointer to the allocated sector
 	 block_write(fs_device, inode->direct[i], zeroes); //Now clean what is inside the allocated sector
 	 inode->numDirect++;
-	 if (sectors == 0) { //If the sectors are all allocated
-	  success = true; //Then we allocated everything!
-	 }
-	 if (success) { //If we did allocate everything
-	   break;
-	 }
-	}
+
+	} */
+
+  if (sectors == 0) { //If the sectors are all allocated
+    success = true; //Then we allocated everything!
+   }
+  if (success) { //If we did allocate everything
+     inode->length += length; // Update the inode_disk length since we wrote new data!
+     break;
+   }
    }
 
   return success;

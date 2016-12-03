@@ -86,11 +86,11 @@ filesys_create (const char *name, off_t initial_size, bool type_dir)
                   && free_map_allocate (1, &inode_sector)
                   && inode_create (inode_sector, initial_size, type_dir));
     #ifdef FILESYS_DEBUG
-  printf("filesyscreate: success1: %d\n", success);
+  printf("filesyscreate: success1 inode sec %d: %d\n",inode_sector, success);
   #endif
   success = dir_add (dir, parsed_name, inode_sector);
     #ifdef FILESYS_DEBUG
-  printf("filesyscreate: success2: %d added to %p\n", success, dir);
+  printf("filesyscreate: success2: %d added to %p %p\n", success, dir, dir->inode);
   #endif
 
   if (!success && inode_sector != 0) 
@@ -106,7 +106,7 @@ filesys_create (const char *name, off_t initial_size, bool type_dir)
     inode_edit_parent(parent_sector, inode);
     inode_close(inode);
   }
-  //dir_close (dir);
+  dir_close (dir); // Close the directory in which we added the new file to (thus updating it on disk)
   //inode_close(inode);
   }
   #ifdef FILESYS_DEBUG
@@ -274,14 +274,17 @@ filesys_find_dir(const char* name,
   else
   {
         #ifdef FILESYS_DEBUG
-    printf("Using cd not root\n");
+    printf("Using cd not root %p\n", t->cd.cd_dir);
     #endif
     dir = t->cd.cd_dir;
   }
 
   if(dir == NULL)
+  {
     dir = dir_open_root();
+  }
   #ifdef FILESYS_DEBUG
+  printf("using dir -> %p\n", dir);
   printf("filesys find: i = %d", argv[0]);
   #endif
 
