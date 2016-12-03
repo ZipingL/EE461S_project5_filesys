@@ -403,9 +403,11 @@ bool inode_expand(struct inode_disk *inode, off_t length) { //This will be the f
 
   static char zeroes[BLOCK_SECTOR_SIZE]; //An array of zeroes to "clean" the sector data
   int sectors = bytes_to_sectors (length);// - bytes_to_sectors(inode->length); //This determines the length by which you want to expand the current inode
+  int total_sectors = sectors; // save a copy of sectors
   bool success = false;
 
-  for (int i = inode->numDirect; i < DIRECT_BLOCK_SIZE; i++) { //This is where we actually allocate the sectors
+  int i = -1;
+  for (i = inode->numDirect; i < DIRECT_BLOCK_SIZE; i++) { //This is where we actually allocate the sectors
 	i = inode->numDirect; //Start at the next free block
 	if (sectors > 0) { //If there are still sectors to allocate
 	 //Well, let's allocate!
@@ -430,6 +432,19 @@ bool inode_expand(struct inode_disk *inode, off_t length) { //This will be the f
      break;
    }
    }
+
+   /* Hypothetical Design:
+    if(!success)
+    { 
+      inode->length += (DIRECT_BLOCK_SIZE*512); // Update what we've expanded so far
+      int length_left = length - (DIRECT_BLOCK_SIZE*512); // Get the unexpanded length
+
+      // Expand the indirect, since direct is full
+      // If indirect is full, inode_indirect_expand then call
+      // "inode_dbl_indirect_expand()"
+      success = inode_indirect_expand(inode, length_left);
+    }
+  */
 
   return success;
 }
