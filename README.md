@@ -102,7 +102,7 @@
 	pass tests/filesys/extended/dir-open
 	pass tests/filesys/extended/dir-over-file
 	pass tests/filesys/extended/dir-rm-cwd
-	FAIL tests/filesys/extended/dir-rm-parent
+	pass tests/filesys/extended/dir-rm-parent
 	pass tests/filesys/extended/dir-rm-root
 	FAIL tests/filesys/extended/dir-rm-tree
 	FAIL tests/filesys/extended/dir-rmdir
@@ -142,7 +142,7 @@
 	FAIL tests/filesys/extended/grow-tell-persistence
 	FAIL tests/filesys/extended/grow-two-files-persistence
 	FAIL tests/filesys/extended/syn-rw-persistence
-	43 of 121 tests failed.
+	42 of 121 tests failed.
 
 
  
