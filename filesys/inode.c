@@ -217,7 +217,7 @@ inode_close (struct inode *inode)
       if (inode->removed) 
         {
           bool removed = true;
-		 for (int i = 0; i < DIRECT_BLOCK_SIZE; i++) {
+		 for (int i = 0; i < inode->data.numDirect; i++) {
 			free_map_release(inode->data.direct[i], 1); //Just deallocate all the direct blocks
 		 }  
          free_map_release (inode->sector, 1);
