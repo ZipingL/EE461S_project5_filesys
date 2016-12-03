@@ -37,46 +37,46 @@
 	pass tests/userprog/create-null
 	pass tests/userprog/create-bad-ptr
 	pass tests/userprog/create-long
-	FAIL tests/userprog/create-exists
+	pass tests/userprog/create-exists
 	pass tests/userprog/create-bound
-	FAIL tests/userprog/open-normal
+	pass tests/userprog/open-normal
 	pass tests/userprog/open-missing
-	FAIL tests/userprog/open-boundary
+	pass tests/userprog/open-boundary
 	pass tests/userprog/open-empty
 	pass tests/userprog/open-null
 	pass tests/userprog/open-bad-ptr
-	FAIL tests/userprog/open-twice
-	FAIL tests/userprog/close-normal
-	FAIL tests/userprog/close-twice
+	pass tests/userprog/open-twice
+	pass tests/userprog/close-normal
+	pass tests/userprog/close-twice
 	pass tests/userprog/close-stdin
 	pass tests/userprog/close-stdout
 	pass tests/userprog/close-bad-fd
-	FAIL tests/userprog/read-normal
-	FAIL tests/userprog/read-bad-ptr
-	FAIL tests/userprog/read-boundary
-	FAIL tests/userprog/read-zero
+	pass tests/userprog/read-normal
+	pass tests/userprog/read-bad-ptr
+	pass tests/userprog/read-boundary
+	pass tests/userprog/read-zero
 	pass tests/userprog/read-stdout
 	pass tests/userprog/read-bad-fd
-	FAIL tests/userprog/write-normal
-	FAIL tests/userprog/write-bad-ptr
-	FAIL tests/userprog/write-boundary
-	FAIL tests/userprog/write-zero
+	pass tests/userprog/write-normal
+	pass tests/userprog/write-bad-ptr
+	pass tests/userprog/write-boundary
+	pass tests/userprog/write-zero
 	pass tests/userprog/write-stdin
 	pass tests/userprog/write-bad-fd
-	FAIL tests/userprog/exec-once
-	FAIL tests/userprog/exec-arg
-	FAIL tests/userprog/exec-multiple
+	pass tests/userprog/exec-once
+	pass tests/userprog/exec-arg
+	pass tests/userprog/exec-multiple
 	pass tests/userprog/exec-missing
 	pass tests/userprog/exec-bad-ptr
-	FAIL tests/userprog/wait-simple
-	FAIL tests/userprog/wait-twice
-	FAIL tests/userprog/wait-killed
+	pass tests/userprog/wait-simple
+	pass tests/userprog/wait-twice
+	pass tests/userprog/wait-killed
 	pass tests/userprog/wait-bad-pid
-	FAIL tests/userprog/multi-recurse
-	FAIL tests/userprog/multi-child-fd
-	FAIL tests/userprog/rox-simple
-	FAIL tests/userprog/rox-child
-	FAIL tests/userprog/rox-multichild
+	pass tests/userprog/multi-recurse
+	pass tests/userprog/multi-child-fd
+	pass tests/userprog/rox-simple
+	pass tests/userprog/rox-child
+	pass tests/userprog/rox-multichild
 	pass tests/userprog/bad-read
 	pass tests/userprog/bad-write
 	pass tests/userprog/bad-read2
@@ -88,27 +88,27 @@
 	FAIL tests/filesys/base/lg-random
 	FAIL tests/filesys/base/lg-seq-block
 	FAIL tests/filesys/base/lg-seq-random
-	FAIL tests/filesys/base/sm-create
-	FAIL tests/filesys/base/sm-full
-	FAIL tests/filesys/base/sm-random
-	FAIL tests/filesys/base/sm-seq-block
-	FAIL tests/filesys/base/sm-seq-random
-	FAIL tests/filesys/base/syn-read
+	pass tests/filesys/base/sm-create
+	pass tests/filesys/base/sm-full
+	pass tests/filesys/base/sm-random
+	pass tests/filesys/base/sm-seq-block
+	pass tests/filesys/base/sm-seq-random
+	pass tests/filesys/base/syn-read
 	FAIL tests/filesys/base/syn-remove
-	FAIL tests/filesys/base/syn-write
-	FAIL tests/filesys/extended/dir-empty-name
-	FAIL tests/filesys/extended/dir-mk-tree
-	FAIL tests/filesys/extended/dir-mkdir
-	FAIL tests/filesys/extended/dir-open
-	FAIL tests/filesys/extended/dir-over-file
-	FAIL tests/filesys/extended/dir-rm-cwd
+	pass tests/filesys/base/syn-write
+	pass tests/filesys/extended/dir-empty-name
+	pass tests/filesys/extended/dir-mk-tree
+	pass tests/filesys/extended/dir-mkdir
+	pass tests/filesys/extended/dir-open
+	pass tests/filesys/extended/dir-over-file
+	pass tests/filesys/extended/dir-rm-cwd
 	FAIL tests/filesys/extended/dir-rm-parent
-	FAIL tests/filesys/extended/dir-rm-root
+	pass tests/filesys/extended/dir-rm-root
 	FAIL tests/filesys/extended/dir-rm-tree
 	FAIL tests/filesys/extended/dir-rmdir
-	FAIL tests/filesys/extended/dir-under-file
+	pass tests/filesys/extended/dir-under-file
 	FAIL tests/filesys/extended/dir-vine
-	FAIL tests/filesys/extended/grow-create
+	pass tests/filesys/extended/grow-create
 	FAIL tests/filesys/extended/grow-dir-lg
 	FAIL tests/filesys/extended/grow-file-size
 	FAIL tests/filesys/extended/grow-root-lg
@@ -142,8 +142,8 @@
 	FAIL tests/filesys/extended/grow-tell-persistence
 	FAIL tests/filesys/extended/grow-two-files-persistence
 	FAIL tests/filesys/extended/syn-rw-persistence
+	43 of 121 tests failed.
 
-	84 of 121 tests failed.
 
  
 

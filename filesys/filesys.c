@@ -54,7 +54,7 @@ bool
 filesys_create (const char *name, off_t initial_size, bool type_dir) 
 {
   #ifdef FILESYS_DEBUG
-  printf("filesys_create\n");
+  printf("filesys_create %s\n", name);
   #endif 
 
     // Check if name is ""
@@ -278,7 +278,6 @@ filesys_find_dir(const char* name,
     #endif
     dir = t->cd.cd_dir;
   }
-
   if(dir == NULL)
   {
     dir = dir_open_root();

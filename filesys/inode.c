@@ -206,28 +206,41 @@ inode_close (struct inode *inode)
   if (inode == NULL)
     return;
 
+  bool list_remove_inode = false;
+  bool removed = false;
   /* Release resources if this was the last opener. */
   if (--inode->open_cnt == 0)
     {
       /* Remove from inode list and release lock. */
-      list_remove (&inode->elem);
- 
+      list_remove_inode = true;
       /* Deallocate blocks if removed. */
       if (inode->removed) 
         {
+          bool removed = true;
 		 for (int i = 0; i < DIRECT_BLOCK_SIZE; i++) {
 			free_map_release(inode->data.direct[i], 1); //Just deallocate all the direct blocks
 		 }  
          free_map_release (inode->sector, 1);
          free_map_release (inode->data.start, bytes_to_sectors (inode->data.length)); 
         } 
-	  else { //Save the state of the disk_inode to disk
-		block_write(fs_device, inode->sector, &inode->data); //This writes the state of the latest copy of the disk_inode to disk
- 	  }
 
     }
 
-  free (inode);
+    // Not going to rmeove from inode list if last opener did not close
+    if(!removed){ //Save the state of the disk_inode to disk regardless, but only if it hasn't been deleted aka removed
+    inode->data.parent = inode->parent;
+    block_write(fs_device, inode->sector, &inode->data); //This writes the state of the latest copy of the disk_inode to disk
+    }
+
+    // Remove the inode from the inode list if
+    // the last opener has closed it
+    // then free the inode
+    if(list_remove_inode == true)
+    {
+      list_remove (&inode->elem);
+      free(inode);
+    }
+
 }
 
 /* Marks INODE to be deleted when it is closed by the last caller who
