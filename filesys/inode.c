@@ -262,12 +262,55 @@ inode_read_at (struct inode *inode, void *buffer_, off_t size, off_t offset)
   uint8_t *buffer = buffer_;
   off_t bytes_read = 0;
   uint8_t *bounce = NULL;
-  bool readable = false; //Checks if you can read from the requested sector
-  block_sector_t sectorToReadFrom;
+  int sector_size = 512; //The number of bytes in a sector
+  bool readable = false;
+  int sectorToReadFrom;
+  
 
   /* Disk sector to read, starting byte offset within sector. */
   block_sector_t sector_idx = byte_to_sector (inode, offset);
   int sector_ofs = offset % BLOCK_SECTOR_SIZE;
+
+  if (size <= sector_size) { //If you only need to read 512 bytes or less, have inode_read_at operate normally
+	/* Bytes left in inode, bytes left in sector, lesser of the two. */
+      off_t inode_left = inode_length (inode) - offset;
+      int sector_left = BLOCK_SECTOR_SIZE - sector_ofs;
+      int min_left = inode_left < sector_left ? inode_left : sector_left;
+
+      /* Number of bytes to actually copy out of this sector. */
+      int chunk_size = size < min_left ? size : min_left;
+      if (chunk_size <= 0)
+        return bytes_read;
+
+      if (sector_ofs == 0 && chunk_size == BLOCK_SECTOR_SIZE)
+        {
+          /* Read full sector directly into caller's buffer. */
+          block_read (fs_device, sector_idx, buffer + bytes_read);
+        }
+      else 
+        {
+          /* Read sector into bounce buffer, then partially copy
+             into caller's buffer. */
+          if (bounce == NULL) 
+            {
+              bounce = malloc (BLOCK_SECTOR_SIZE);
+              if (bounce == NULL)
+				free (bounce);
+  	  			return bytes_read;
+            }
+          block_read (fs_device, sector_idx, bounce);
+          memcpy (buffer + bytes_read, bounce + sector_ofs, chunk_size);
+        }
+      
+      /* Advance. */
+      size -= chunk_size;
+      offset += chunk_size;
+      bytes_read += chunk_size;
+  	  free (bounce);
+
+  	  return bytes_read;
+  }
+  //Otherwise you need to read from the direct sectors
 
   for (int j = 0; j < DIRECT_BLOCK_SIZE; j++) {
 	if (inode->data.direct[j] == sector_idx) { //If we can find the sector to read from
@@ -283,18 +326,17 @@ inode_read_at (struct inode *inode, void *buffer_, off_t size, off_t offset)
 
  while (size > 0) 
     { 
-	  int chunk_size = 512; //How many bytes you can read from a sector
 	  for (int i = 0; i < DIRECT_BLOCK_SIZE; i++) { //Now we read from the allocated blocks
 		i = sectorToReadFrom; //So that you start reading from the correct sector
-		if (size > chunk_size) { //If the number of bytes to be read is too many to read from a single sector
-		  block_read(fs_device, inode->data.direct[i], chunk_size); //Read 512 bytes
-		  size -= chunk_size; //So 512 bytes have already been read
-		  bytes_read += chunk_size; //Update how many bytes were read
+		if (size > sector_size) { //If the number of bytes to be read is too many to read from a single sector
+		  block_read(fs_device, inode->data.direct[i], sector_size); //Read 512 bytes
+		  size -= sector_size; //So 512 bytes have already been read
+		  bytes_read += sector_size; //Update how many bytes were read
 		}
 		else { //We only have to read from a single sector
 		  block_read(fs_device, inode->data.direct[i], buffer); //Read from the sector
-		  size -= chunk_size; //Of course, update size to reflect that all the bytes have been read
-		  bytes_read += chunk_size; //Update how many bytes were read
+		  size -= sector_size; //Of course, update size to reflect that all the bytes have been read
+		  bytes_read += sector_size; //Update how many bytes were read
 		  break;
 		}
 	  } //So now the direct blocks are filled up
