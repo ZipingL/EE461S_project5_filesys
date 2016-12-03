@@ -94,7 +94,7 @@
 	pass tests/filesys/base/sm-seq-block
 	pass tests/filesys/base/sm-seq-random
 	pass tests/filesys/base/syn-read
-	FAIL tests/filesys/base/syn-remove
+	pass tests/filesys/base/syn-remove
 	pass tests/filesys/base/syn-write
 	pass tests/filesys/extended/dir-empty-name
 	pass tests/filesys/extended/dir-mk-tree
@@ -104,8 +104,8 @@
 	pass tests/filesys/extended/dir-rm-cwd
 	pass tests/filesys/extended/dir-rm-parent
 	pass tests/filesys/extended/dir-rm-root
-	FAIL tests/filesys/extended/dir-rm-tree
-	FAIL tests/filesys/extended/dir-rmdir
+	pass tests/filesys/extended/dir-rm-tree
+	pass tests/filesys/extended/dir-rmdir
 	pass tests/filesys/extended/dir-under-file
 	FAIL tests/filesys/extended/dir-vine
 	pass tests/filesys/extended/grow-create
@@ -142,7 +142,8 @@
 	FAIL tests/filesys/extended/grow-tell-persistence
 	FAIL tests/filesys/extended/grow-two-files-persistence
 	FAIL tests/filesys/extended/syn-rw-persistence
-	42 of 121 tests failed.
+	39 of 121 tests failed.
+
 
 
  
