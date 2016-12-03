@@ -12,7 +12,8 @@
 /* Identifies an inode. */
 #define INODE_MAGIC 0x494e4f44
 
-
+bool inode_expand(struct inode_disk *inode, off_t length);
+off_t inode_extension(struct inode *inode, off_t length);
 
 /* Returns the number of sectors to allocate for an inode SIZE
    bytes long. */
@@ -77,12 +78,11 @@ inode_create (block_sector_t sector, off_t length, bool type_dir)
       disk_inode->type_dir = type_dir;
       disk_inode->parent = ROOT_DIR_SECTOR;
 	  disk_inode->numDirect = 0; //To show no blocks have been written to
-
-	  if (inode_alloc(disk_inode, disk_inode->length)) { //If we allocated to the disk properly
+	  if (inode_expand(disk_inode, disk_inode->length)) { //If we allocated to the disk properly
+		printf("Hey, guys!");
 		block_write(fs_device, sector, disk_inode); //Update the inode that is now on disk
 		success = true;
 	  }
-
 	free(disk_inode); //We're done with the inode on disk, so let's free it
     }
   return success; //Whether allocation was successful or not, we need to return whether we were successful or not
@@ -256,7 +256,7 @@ inode_read_at (struct inode *inode, void *buffer_, off_t size, off_t offset)
   while (size > 0) 
     {
       /* Disk sector to read, starting byte offset within sector. */
-      block_sector_t sector_idx = byte_to_sector (inode, offset);
+      block_sector_t sector_idx = byte_to_sector (inode, inode->length, offset);
       int sector_ofs = offset % BLOCK_SECTOR_SIZE;
 
       /* Bytes left in inode, bytes left in sector, lesser of the two. */
@@ -322,7 +322,7 @@ inode_write_at (struct inode *inode, const void *buffer_, off_t size,
   while (size > 0) 
     {
       /* Sector to write, starting byte offset within sector. */
-      block_sector_t sector_idx = byte_to_sector (inode, offset);
+      block_sector_t sector_idx = byte_to_sector (inode, inode_length(inode), offset);
       int sector_ofs = offset % BLOCK_SECTOR_SIZE;
 
       /* Bytes left in inode, bytes left in sector, lesser of the two. */
@@ -438,8 +438,14 @@ off_t inode_extension(struct inode *inode, off_t length) { //This will be the fu
 	 free_map_allocate(1, &inode->data.direct[i]); //Now we just allocate a sector and the direct table holds a pointer to the allocated sector
 	 block_write(fs_device, inode->data.direct[i], zeroes); //Now clean what is inside the allocated sector
 	 sectors--; //We know a sector has been allocated
+	 inode->data.numDirect++;
+	}
+	else {
+	 free_map_allocate(1, &inode->data.direct[inode->data.numDirect]); //Now we just allocate a sector and the direct table holds a pointer to the allocated sector
+	 block_write(fs_device, inode->data.direct[i], zeroes); //Now clean what is inside the allocated sector
+	 sectors--; //We know a sector has been allocated
 	 if (sectors == 0) { //If the sectors are all allocated
-		success = true; //Then we allocated everything!
+	  success = true; //Then we allocated everything!
 	 }
 	 if (success) { //If we did allocate everything
 	   break;
