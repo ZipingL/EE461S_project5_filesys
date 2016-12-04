@@ -329,7 +329,7 @@ inode_write_at (struct inode *inode, const void *buffer_, off_t size,
     return 0;
 
   if (offset + size > inode_length(inode)) { //If you are writing to a point past the inode
-	inode->length = inode_extension(inode, offset + size); //Now you must extend the inode that exists before writing to it and alos update the length of the inode
+	inode->length = inode_expand(&inode->data, offset + size); //Now you must extend the inode that exists before writing to it and alos update the length of the inode
   }
 
   while (size > 0) 
@@ -461,39 +461,4 @@ bool inode_expand(struct inode_disk *inode, off_t length) { //This will be the f
   */
 
   return success;
-}
-
-off_t inode_extension(struct inode *inode, off_t length) { //This will be the function to expand the blocks needed in inode_write_at
-
-  static char zeroes[BLOCK_SECTOR_SIZE]; //An array of zeroes to "clean" the sector data
-  size_t sectors = bytes_to_sectors (length) - bytes_to_sectors(inode->length); //This determines the length by which you want to expand the current inode
-  bool success = false;
-  int x = 0;
-
-  for (int i = 0; i < DIRECT_BLOCK_SIZE; i++) { //This is where we actually allocate the sectors
-	i = inode->data.numDirect; //Start at the next free block
-	if (sectors > 0) { //If there are still sectors to allocate
-	 //Well, let's allocate!
-	 free_map_allocate(1, &inode->data.direct[i]); //Now we just allocate a sector and the direct table holds a pointer to the allocated sector
-	 block_write(fs_device, inode->data.direct[i], zeroes); //Now clean what is inside the allocated sector
-	 sectors--; //We know a sector has been allocated
-	 inode->data.numDirect++;
-	}
-	else {
-	 free_map_allocate(1, &inode->data.direct[inode->data.numDirect]); //Now we just allocate a sector and the direct table holds a pointer to the allocated sector
-	 block_write(fs_device, inode->data.direct[i], zeroes); //Now clean what is inside the allocated sector
-	 sectors--; //We know a sector has been allocated
-	 inode->data.numDirect++;
-	 if (sectors == 0) { //If the sectors are all allocated
-	  success = true; //Then we allocated everything!
-	 }
-	 if (success) { //If we did allocate everything
-	   break;
-	 }
-	}
-   }
-
-  if (success) { //One last check
-	return length;
-  }
 }
