@@ -6,7 +6,7 @@
 #include "filesys/filesys.h"
 #include "filesys/free-map.h"
 #include "threads/malloc.h"
-//#define FILESYS_DEBUG_2
+//#define FILESYS_DEBUG 2
 #define DIRECT_BLOCK_SIZE 120
 
 /* Identifies an inode. */
@@ -74,12 +74,11 @@ inode_create (block_sector_t sector, off_t length, bool type_dir)
     {
       size_t sectors = bytes_to_sectors (length); //Takes the file length and determines how many sectors need to be allocated
       disk_inode->length = 0; // Set the length to 0, as well will "expand it" with actual given length
-      disk_inode->magic = INODE_MAGIC;
+      disk_inode->magic = INODE_MAGIC; //hello
       disk_inode->type_dir = type_dir;
       disk_inode->parent = ROOT_DIR_SECTOR;
 	  disk_inode->numDirect = 0; //To show no blocks have been written to
 	  if (inode_expand(disk_inode, length)) { //If we allocated to the disk properly
-
 		block_write(fs_device, sector, disk_inode); //Update the inode that is now on disk
 		success = true;
 	  }
@@ -329,7 +328,8 @@ inode_write_at (struct inode *inode, const void *buffer_, off_t size,
     return 0;
 
   if (offset + size > inode_length(inode)) { //If you are writing to a point past the inode
-	inode->length = inode_expand(&inode->data, offset + size); //Now you must extend the inode that exists before writing to it and alos update the length of the inode
+	inode->length = inode_expand(&inode->data, offset + size - inode_length(inode)); //Now you must extend the inode that exists before writing to it and alos update the length of the inode
+	//printf("%d\n", inode->length);
   }
 
   while (size > 0) 

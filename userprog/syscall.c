@@ -11,7 +11,7 @@
 #include "filesys/directory.h"
 #include "filesys/inode.h"
 
-
+//#define SYSCALL_DEBUG 1
 
 struct child_list_elem* add_child_to_list(struct thread* parent_thread, tid_t pid);
 int add_file_to_fd_table(struct thread* current_thread, struct file* fp, bool warning);
@@ -563,7 +563,6 @@ int read (int fd, void *buffer, unsigned size)
     Fd 1 writes to the console. Your code to write to the console should write all of buffer in one call to putbuf(), at least as long as size is not bigger than a few hundred bytes. (It is reasonable to break up larger buffers.) Otherwise, lines of text output by different processes may end up interleaved on the console, confusing both human readers and our grading scripts. */
 
 int write (int fd, const void *buffer, unsigned size, bool* warning) { //Already done in file.c, but will implement anyway (super confused now)
-
 
 	struct thread* current_thread = thread_current();
 	struct file* fp = NULL;
