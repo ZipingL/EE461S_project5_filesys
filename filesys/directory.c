@@ -177,6 +177,7 @@ dir_add (struct dir *dir, const char *name, block_sector_t inode_sector)
   e.in_use = true;
   strlcpy (e.name, name, sizeof e.name);
   e.inode_sector = inode_sector;
+  //printf("Hello.\n");
   success = inode_write_at (dir->inode, &e, sizeof e, ofs) == sizeof e;
   #ifdef DIRECTORY_DEBUG
   printf(success ? "true\n" : "false\n");
