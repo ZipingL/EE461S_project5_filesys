@@ -448,6 +448,7 @@ bool inode_expand(struct inode_disk *inode, off_t length) { //This will be the f
   if (!success && sectors != 0) { //Just direct pointers were not enough
 	success = false; //Set success back to false
 	inode->indirect_ptr = block.ind_ptrs; //This way, you can link to the array of 128 more sectors
+	free_map_allocate(1, inode->indirect_ptr); //Now we allocate a sector
 	for (int j = 0; j < INDIRECT_BLOCK_SIZE; j++) {
 	  j = inode->numIndirect; //Start with the next free indirect block
 	  if (sectors > 0) { //Now we can allocate indirect blocks
@@ -458,6 +459,7 @@ bool inode_expand(struct inode_disk *inode, off_t length) { //This will be the f
 	  }
 	  if (sectors == 0) { //If all the sectors were allocated
 		success = true;
+		block_write(fs_device, *(inode->indirect_ptr), &block); //Now we write to disk
 		inode->length += length; //Now we can update the length
 	 	break; //Get out of this loop
 	  }
