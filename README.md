@@ -142,7 +142,7 @@
 	FAIL tests/filesys/extended/grow-tell-persistence
 	FAIL tests/filesys/extended/grow-two-files-persistence
 	FAIL tests/filesys/extended/syn-rw-persistence
-	35 of 121 tests failed
+	35 of 121 tests failed.
 
 
 	 
