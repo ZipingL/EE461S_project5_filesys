@@ -80,7 +80,7 @@ inode_init (void)
    Returns true if successful.
    Returns false if memory or disk allocation fails. */
 bool
-inode_create (block_sector_t sector, off_t length, bool type_dir)
+inode_create (block_sector_t sector, off_t length, bool type_dir, block_sector_t parent_sector)
 {
   //The sectors all need to be allocated here. Always allocate enough for the file size of length n
   struct inode_disk *disk_inode = NULL;
@@ -101,7 +101,7 @@ inode_create (block_sector_t sector, off_t length, bool type_dir)
       disk_inode->length = 0; // Set the length to 0, as well will "expand it" with actual given length
       disk_inode->magic = INODE_MAGIC; //hello
       disk_inode->type_dir = type_dir;
-      disk_inode->parent = ROOT_DIR_SECTOR;
+      disk_inode->parent = parent_sector;
 
     disk_inode->indirect_ptr = 0;
     disk_inode->db_indirect_ptr = 0;
@@ -245,23 +245,42 @@ inode_close (struct inode *inode)
       list_remove_inode = true;
       /* Deallocate blocks if removed. */
       if (inode->removed) 
-        {
-          bool removed = true;
-     for (int i = 0; i < inode->data.numDirect; i++) {
-      free_map_release(inode->data.direct[i], 1); //Just deallocate all the direct blocks
-     }
-     /*for (int j = 0; j < inode->data.numDirect; j++) {
-      free_map_release(inode->data.indirect_ptr[j], 1); //Just deallocate all the direct blocks
-     } */  
+      {
+        #ifdef INODE_DEBUG
+        printf("Deleting inode %p sector %d\n", inode, inode->sector);
+        #endif
+          removed = true;
+        
+         for (int i = 0; i < inode->data.numDirect; i++) {
+          free_map_release(inode->data.direct[i], 1); //Just deallocate all the direct blocks
+         }
+     
+         struct indirect_block block;
+
+         for(int j = 0; j < INDIRECT_BLOCK_SIZE; j++)
+         {
+          block.ind_ptrs[j] = 0;
+         }
+         if(inode->data.indirect_ptr > 0)
+         {
+           block_read(fs_device, inode->data.indirect_ptr, &block);
+           for (int j = 0; j < inode->data.numIndirect; j++) {
+            free_map_release(block.ind_ptrs[j], 1); //Just deallocate all the direct blocks
+           }
+         } 
          free_map_release (inode->sector, 1);
-         free_map_release (inode->data.start, bytes_to_sectors (inode->data.length)); 
-        } 
+      }
 
-    }
+     }
+         
 
-    // Not going to rmeove from inode list if last opener did not close
+
+    
+
+    // If not marked for deletion, save the state
     if(!removed){ //Save the state of the disk_inode to disk regardless, but only if it hasn't been deleted aka removed
     inode->data.parent = inode->parent;
+    ASSERT(inode->length == inode->data.length);
     block_write(fs_device, inode->sector, &inode->data); //This writes the state of the latest copy of the disk_inode to disk
     }
 

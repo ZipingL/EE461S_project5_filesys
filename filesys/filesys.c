@@ -7,7 +7,7 @@
 #include "filesys/inode.h"
 #include "filesys/directory.h"
 #include "threads/thread.h"
-///#define FILESYS_DEBUG 1
+//#define FILESYS_DEBUG 1
 
 /* Partition that contains the file system. */
 struct block *fs_device;
@@ -61,7 +61,7 @@ filesys_create (const char *name, off_t initial_size, bool type_dir)
   if(strcmp(name, "") == 0)
     return false;
 
-  block_sector_t inode_sector = 0;
+  block_sector_t inode_sector = -1;
   block_sector_t parent_sector;
   struct dir *dir = NULL;
   struct inode *inode = NULL;
@@ -84,11 +84,15 @@ filesys_create (const char *name, off_t initial_size, bool type_dir)
   // Add the file/dir to the specifieddirectory
   success = (dir != NULL
                   && free_map_allocate (1, &inode_sector)
-                  && inode_create (inode_sector, initial_size, type_dir));
-    #ifdef FILESYS_DEBUG
+                  && inode_create (inode_sector, initial_size, type_dir, parent_sector));
+  #ifdef FILESYS_DEBUG
   printf("filesyscreate: success1 inode sec %d: %d\n",inode_sector, success);
-  #endif
-  success = dir_add (dir, parsed_name, inode_sector);
+ #endif
+
+  if(inode_sector == -1) // Exit with false if out ofmemory
+    return false;
+
+   success = dir_add (dir, parsed_name, inode_sector);
     #ifdef FILESYS_DEBUG
   printf("filesyscreate: success2: %d added to %p %p\n", success, dir, dir->inode);
   #endif
@@ -96,17 +100,8 @@ filesys_create (const char *name, off_t initial_size, bool type_dir)
   if (!success && inode_sector != 0) 
     free_map_release (inode_sector, 1);
 
-  else
-  {
-      #ifdef FILESYS_DEBUG
-    printf("edit parent\n");
-    #endif
-    
-    struct inode * inode = inode_open(inode_sector);
-    inode_edit_parent(parent_sector, inode);
-    inode_close(inode);
-  }
- // dir_close (dir); // Close the directory in which we added the new file to (thus updating it on disk)
+  if(dir!=NULL)
+   dir_close (dir); // Close the directory in which we added the new file to (thus updating it on disk)
   //inode_close(inode);
   }
   #ifdef FILESYS_DEBUG
@@ -160,6 +155,26 @@ filesys_open (const char *name, bool type_dir, bool* warning)
         if(name[0] == 47 && name[1] == NULL) // '/' == ascii dec:47
         {
           found = true;
+          //inode = inode_reopen(inode);
+        }
+
+        // Handle Edge case where file name is "."
+        else if(name[0] == 46 && name[1] == NULL)
+        {
+          inode = dir->inode;
+          //inode = inode_reopen(inode);
+          found = true;
+        }
+
+        // Handle Edge case where file name is ".."
+        else if(name[0] == 46 && name[1] == 46 && name[2] == NULL)
+        {
+          if(dir->inode->removed == false)
+          {
+          inode = inode_open(dir->inode->parent);
+          found = true;
+          dir_close(dir);
+          }
         }
         else 
         {
@@ -168,6 +183,7 @@ filesys_open (const char *name, bool type_dir, bool* warning)
           #endif
           found = dir_lookup (dir, parsed_name,
               &inode);
+          dir_close(dir);
         }
 
           #ifdef FILESYS_DEBUG
@@ -205,25 +221,50 @@ filesys_open (const char *name, bool type_dir, bool* warning)
     // Condition is hit when user changes directory (syscall chdir)
     else
     {
-      bool found = false;
+      bool found = false; bool no_reopen = false;
             // Handle Edge case where directory name is "/"
         if(name[0] == 47 && name[1] == NULL) // '/' == ascii dec:47
         {
           found = true;
+          //inode = inode_reopen(inode);
+        }
+
+        // Handle Edge case where file name is "."
+        else if(name[0] == 46 && name[1] == NULL)
+        {
+          inode = dir->inode;
+          //inode = inode_reopen(inode);
+          found = true;
+        }
+        // Handle Edge case where file name is ".."
+        else if(name[0] == 46 && name[1] == 46 && name[2] == NULL)
+        {
+          if(dir->inode->removed == false)
+          {
+          inode = inode_open(dir->inode->parent);
+          found = true;
+          }
+          dir_close(dir);
+
         }
         else
         {
           found = dir_lookup (dir, parsed_name,
               &inode);
+          dir_close(dir);
         }
         if(found)
         {
-            // Make sure the directory/file actually exists
+          #ifdef FILESYS_DEBUG
+          printf("Changing cd directory to inode %p %d\n", inode, inode->sector);
+          #endif
+            // Make sure the directory/file actually existsdir_removedir_remove
             if(inode->removed)
             {
               inode_close(inode);
               return NULL;
             }
+
         struct dir* dir = dir_open(inode);
 
         thread_current()->cd.cd_dir = dir;
@@ -265,7 +306,7 @@ filesys_find_dir(const char* name,
   parse_file_path(name_cpy, argv,parsed_name);
 
   // Parent sector
-  block_sector_t return_parent_sector = ROOT_DIR_SECTOR;
+  block_sector_t return_parent_sector = -1;
 
   // Open the correct dir to create the file/dir in
       #ifdef FILESYS_DEBUG
@@ -277,9 +318,14 @@ filesys_find_dir(const char* name,
   else
   {
         #ifdef FILESYS_DEBUG
-    printf("Using cd not root %p\n", t->cd.cd_dir);
+    if(t->cd.cd_dir)
+    printf("Using cd not root %p secotr %d\n", t->cd.cd_dir, t->cd.cd_dir->inode->sector);
     #endif
     dir = t->cd.cd_dir;
+    if(dir !=NULL)
+    {
+      dir = dir_open(inode_reopen(dir->inode));
+    }
   }
   if(dir == NULL)
   {
@@ -330,16 +376,18 @@ filesys_find_dir(const char* name,
       else
         return false;
     }
-
     return_parent_sector = inode->sector;
+
 
   }
   #ifdef FILESYS_DEBUG
   printf("find inode%p\n find dir %p\n", inode,dir);
   #endif
 
+  if(return_parent_sector == -1)
+    return_parent_sector = dir->inode->sector;
   // Return the root directory's inode
-  // in the edge case where the name is "/"
+  // in the edge case where the name is "/"inode
   if(name[0] == 47 && name[1] == NULL)
   {
     inode = dir->inode;

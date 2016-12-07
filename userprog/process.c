@@ -236,6 +236,10 @@ process_exit (int exit_status)
        {
         file_close(element->fp);
        }
+       else // Else close the directoryc
+       {
+        dir_close((struct dir*)element->fp);
+       }
        free(element);
      }
   // Now free the file pointer to the code the user program ran on
@@ -411,9 +415,9 @@ load (const char *file_name, void (**eip) (void), void **esp)
 
 
   /* Open executable file. */
-  lock_acquire(&open_close_lock);
+  lock_acquire(&read_write_lock);
   file = filesys_open (argv[0], false, NULL);
-  lock_release(&open_close_lock);
+  lock_release(&read_write_lock);
 
   if(file == NULL)
   {
