@@ -107,7 +107,7 @@
 	pass tests/filesys/extended/dir-rm-tree
 	pass tests/filesys/extended/dir-rmdir
 	pass tests/filesys/extended/dir-under-file
-	FAIL tests/filesys/extended/dir-vine
+	pass tests/filesys/extended/dir-vine
 	pass tests/filesys/extended/grow-create
 	pass tests/filesys/extended/grow-dir-lg
 	pass tests/filesys/extended/grow-file-size
@@ -119,47 +119,48 @@
 	pass tests/filesys/extended/grow-tell
 	pass tests/filesys/extended/grow-two-files
 	pass tests/filesys/extended/syn-rw
-	FAIL tests/filesys/extended/dir-empty-name-persistence
+	pass tests/filesys/extended/dir-empty-name-persistence
 	FAIL tests/filesys/extended/dir-mk-tree-persistence
-	FAIL tests/filesys/extended/dir-mkdir-persistence
-	FAIL tests/filesys/extended/dir-open-persistence
-	FAIL tests/filesys/extended/dir-over-file-persistence
-	FAIL tests/filesys/extended/dir-rm-cwd-persistence
-	FAIL tests/filesys/extended/dir-rm-parent-persistence
-	FAIL tests/filesys/extended/dir-rm-root-persistence
-	FAIL tests/filesys/extended/dir-rm-tree-persistence
-	FAIL tests/filesys/extended/dir-rmdir-persistence
-	FAIL tests/filesys/extended/dir-under-file-persistence
+	pass tests/filesys/extended/dir-mkdir-persistence
+	pass tests/filesys/extended/dir-open-persistence
+	pass tests/filesys/extended/dir-over-file-persistence
+	pass tests/filesys/extended/dir-rm-cwd-persistence
+	pass tests/filesys/extended/dir-rm-parent-persistence
+	pass tests/filesys/extended/dir-rm-root-persistence
+	pass tests/filesys/extended/dir-rm-tree-persistence
+	pass tests/filesys/extended/dir-rmdir-persistence
+	pass tests/filesys/extended/dir-under-file-persistence
 	FAIL tests/filesys/extended/dir-vine-persistence
-	FAIL tests/filesys/extended/grow-create-persistence
+	pass tests/filesys/extended/grow-create-persistence
 	FAIL tests/filesys/extended/grow-dir-lg-persistence
-	FAIL tests/filesys/extended/grow-file-size-persistence
+	pass tests/filesys/extended/grow-file-size-persistence
 	FAIL tests/filesys/extended/grow-root-lg-persistence
 	FAIL tests/filesys/extended/grow-root-sm-persistence
 	FAIL tests/filesys/extended/grow-seq-lg-persistence
-	FAIL tests/filesys/extended/grow-seq-sm-persistence
+	pass tests/filesys/extended/grow-seq-sm-persistence
 	FAIL tests/filesys/extended/grow-sparse-persistence
-	FAIL tests/filesys/extended/grow-tell-persistence
+	pass tests/filesys/extended/grow-tell-persistence
 	FAIL tests/filesys/extended/grow-two-files-persistence
 	FAIL tests/filesys/extended/syn-rw-persistence
-	24 of 121 tests failed.
+	9 of 121 tests failed.
 
-	- - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - 
+## GRADE
 
 	SUMMARY BY TEST SET
 
 	Test Set                                      Pts Max  % Ttl  % Max
 	--------------------------------------------- --- --- ------ ------
-	tests/filesys/extended/Rubric.functionality    29/ 34  25.6%/ 30.0%
+	tests/filesys/extended/Rubric.functionality    34/ 34  30.0%/ 30.0%
 	tests/filesys/extended/Rubric.robustness       10/ 10  15.0%/ 15.0%
-	tests/filesys/extended/Rubric.persistence       0/ 23   0.0%/ 20.0%
+	tests/filesys/extended/Rubric.persistence      14/ 23  12.2%/ 20.0%
 	tests/filesys/base/Rubric                      30/ 30  20.0%/ 20.0%
 	tests/userprog/Rubric.functionality           108/111   9.7%/ 10.0%
 	tests/userprog/Rubric.robustness               88/ 88   5.0%/  5.0%
 	--------------------------------------------- --- --- ------ ------
-	Total                                                  75.3%/100.0%
+	Total                                                  91.9%/100.0%
 
-	- - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - -
+	- - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - 
+
 
 	 
 
