@@ -109,9 +109,9 @@
 	pass tests/filesys/extended/dir-under-file
 	FAIL tests/filesys/extended/dir-vine
 	pass tests/filesys/extended/grow-create
-	FAIL tests/filesys/extended/grow-dir-lg
+	pass tests/filesys/extended/grow-dir-lg
 	pass tests/filesys/extended/grow-file-size
-	FAIL tests/filesys/extended/grow-root-lg
+	pass tests/filesys/extended/grow-root-lg
 	pass tests/filesys/extended/grow-root-sm
 	FAIL tests/filesys/extended/grow-seq-lg
 	pass tests/filesys/extended/grow-seq-sm
@@ -142,7 +142,8 @@
 	FAIL tests/filesys/extended/grow-tell-persistence
 	FAIL tests/filesys/extended/grow-two-files-persistence
 	FAIL tests/filesys/extended/syn-rw-persistence
-	35 of 121 tests failed.
+	33 of 121 tests failed.
+
 
 
 	 
