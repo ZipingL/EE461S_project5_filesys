@@ -615,7 +615,7 @@ unsigned tell (int fd) {
 	struct list_elem* e = find_fd_element(fd, current_thread);
 	//if(e == NULL) return false; is this needed?
 	struct  fd_list_element *fd_element = list_entry (e, struct fd_list_element, elem_fd);
-	return file_seek(fd_element->fp);
+	return file_tell(fd_element->fp);
 
 }
 

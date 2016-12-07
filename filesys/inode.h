@@ -6,6 +6,11 @@
 #include "devices/block.h"
 #include <list.h>
 
+#define DIRECT_BLOCK_SIZE 118
+#define INDIRECT_BLOCK_SIZE 128
+#define DBINDIRECT_BLOCK_SIZE 128
+
+
 struct bitmap;
 
 /* On-disk inode.
@@ -21,8 +26,8 @@ struct inode_disk
 	uint32_t numIndirect;				/* Number of allocated indirect blocks */
   uint32_t numDbIndirect;
 	block_sector_t direct[118];			/* Holds pointers to free sectors */
-	block_sector_t* indirect_ptr;		/* Holds a pointer to a sector that will point to free sectors */
-	block_sector_t* db_indirect_ptr;	/* Points to a sector that points to a sector that points to free blocks (?) */
+	block_sector_t indirect_ptr;		/* Holds a pointer to a sector that will point to free sectors */
+	block_sector_t db_indirect_ptr;	/* Points to a sector that points to a sector that points to free blocks (?) */
     //uint32_t unused[120];             /* Not used. If you add a field, subtract one from the array size */
   };
 
@@ -36,7 +41,7 @@ struct inode
     int open_cnt;                       /* Number of openers. */
     bool removed;                       /* True if deleted, false otherwise. */
     int deny_write_cnt;                 /* 0: writes ok, >0: deny writes. */
-	off_t length;						/* The same as the length in inode_disk */
+	off_t length;						/* The same as the length in inode_disk, gets updated in inode_write and inode_create */
     struct inode_disk data;             /* Inode content. */
   };
 

@@ -83,11 +83,11 @@
 	pass tests/userprog/bad-write2
 	pass tests/userprog/bad-jump
 	pass tests/userprog/bad-jump2
-	FAIL tests/filesys/base/lg-create
-	FAIL tests/filesys/base/lg-full
-	FAIL tests/filesys/base/lg-random
-	FAIL tests/filesys/base/lg-seq-block
-	FAIL tests/filesys/base/lg-seq-random
+	pass tests/filesys/base/lg-create
+	pass tests/filesys/base/lg-full
+	pass tests/filesys/base/lg-random
+	pass tests/filesys/base/lg-seq-block
+	pass tests/filesys/base/lg-seq-random
 	pass tests/filesys/base/sm-create
 	pass tests/filesys/base/sm-full
 	pass tests/filesys/base/sm-random
@@ -113,12 +113,12 @@
 	pass tests/filesys/extended/grow-file-size
 	pass tests/filesys/extended/grow-root-lg
 	pass tests/filesys/extended/grow-root-sm
-	FAIL tests/filesys/extended/grow-seq-lg
+	pass tests/filesys/extended/grow-seq-lg
 	pass tests/filesys/extended/grow-seq-sm
-	FAIL tests/filesys/extended/grow-sparse
-	FAIL tests/filesys/extended/grow-tell
+	pass tests/filesys/extended/grow-sparse
+	pass tests/filesys/extended/grow-tell
 	pass tests/filesys/extended/grow-two-files
-	FAIL tests/filesys/extended/syn-rw
+	pass tests/filesys/extended/syn-rw
 	FAIL tests/filesys/extended/dir-empty-name-persistence
 	FAIL tests/filesys/extended/dir-mk-tree-persistence
 	FAIL tests/filesys/extended/dir-mkdir-persistence
@@ -142,9 +142,24 @@
 	FAIL tests/filesys/extended/grow-tell-persistence
 	FAIL tests/filesys/extended/grow-two-files-persistence
 	FAIL tests/filesys/extended/syn-rw-persistence
-	33 of 121 tests failed.
+	24 of 121 tests failed.
 
+	- - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - 
 
+	SUMMARY BY TEST SET
+
+	Test Set                                      Pts Max  % Ttl  % Max
+	--------------------------------------------- --- --- ------ ------
+	tests/filesys/extended/Rubric.functionality    29/ 34  25.6%/ 30.0%
+	tests/filesys/extended/Rubric.robustness       10/ 10  15.0%/ 15.0%
+	tests/filesys/extended/Rubric.persistence       0/ 23   0.0%/ 20.0%
+	tests/filesys/base/Rubric                      30/ 30  20.0%/ 20.0%
+	tests/userprog/Rubric.functionality           108/111   9.7%/ 10.0%
+	tests/userprog/Rubric.robustness               88/ 88   5.0%/  5.0%
+	--------------------------------------------- --- --- ------ ------
+	Total                                                  75.3%/100.0%
+
+	- - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - -
 
 	 
 

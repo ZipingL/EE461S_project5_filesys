@@ -101,8 +101,10 @@ lookup (const struct dir *dir, const char *name,
   ASSERT (dir != NULL);
   ASSERT (name != NULL);
 
+  //printf("dir->inode->length %d", dir->inode->length);
   for (ofs = 0; inode_read_at (dir->inode, &e, sizeof e, ofs) == sizeof e;
        ofs += sizeof e) 
+  {
     if (e.in_use && !strcmp (name, e.name)) 
       {
         if (ep != NULL)
@@ -111,6 +113,8 @@ lookup (const struct dir *dir, const char *name,
           *ofsp = ofs;
         return true;
       }
+    //  printf("End forloop\n");
+    }
   return false;
 }
 
@@ -177,7 +181,9 @@ dir_add (struct dir *dir, const char *name, block_sector_t inode_sector)
   e.in_use = true;
   strlcpy (e.name, name, sizeof e.name);
   e.inode_sector = inode_sector;
+  //printf("Dir is now writing\n");
   success = inode_write_at (dir->inode, &e, sizeof e, ofs) == sizeof e;
+  //printf("Dir done writing %d\n", success);
   #ifdef DIRECTORY_DEBUG
   printf(success ? "true\n" : "false\n");
   #endif
