@@ -7,7 +7,7 @@
 #include "filesys/inode.h"
 #include "filesys/directory.h"
 #include "threads/thread.h"
-//#define FILESYS_DEBUG 1
+///#define FILESYS_DEBUG 1
 
 /* Partition that contains the file system. */
 struct block *fs_device;
@@ -163,6 +163,9 @@ filesys_open (const char *name, bool type_dir, bool* warning)
         }
         else 
         {
+          #ifdef FILESYS_DEBUG
+          printf("filesysopen: dirlookup: dir %p dirinode %p openfname %s storage%p\n", dir,dir->inode, parsed_name, inode);
+          #endif
           found = dir_lookup (dir, parsed_name,
               &inode);
         }

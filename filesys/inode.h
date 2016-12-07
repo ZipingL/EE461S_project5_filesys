@@ -19,7 +19,8 @@ struct inode_disk
     unsigned magic;                     /* Magic number. */
 	uint32_t numDirect;					/* Number of allocated direct blocks */
 	uint32_t numIndirect;				/* Number of allocated indirect blocks */
-	block_sector_t direct[119];			/* Holds pointers to free sectors */
+  uint32_t numDbIndirect;
+	block_sector_t direct[118];			/* Holds pointers to free sectors */
 	block_sector_t* indirect_ptr;		/* Holds a pointer to a sector that will point to free sectors */
 	block_sector_t* db_indirect_ptr;	/* Points to a sector that points to a sector that points to free blocks (?) */
     //uint32_t unused[120];             /* Not used. If you add a field, subtract one from the array size */

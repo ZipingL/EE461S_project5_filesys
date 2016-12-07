@@ -6,15 +6,14 @@
 #include "filesys/filesys.h"
 #include "filesys/free-map.h"
 #include "threads/malloc.h"
-//#define FILESYS_DEBUG 2
+//#define INODE_DEBUG 2
 #define DIRECT_BLOCK_SIZE 119
 #define INDIRECT_BLOCK_SIZE 128
 
 /* Identifies an inode. */
 #define INODE_MAGIC 0x494e4f44
 
-bool inode_expand(struct inode_disk *inode, off_t length);
-off_t inode_extension(struct inode *inode, off_t length);
+bool inode_expand(struct inode_disk *inode, off_t length, bool create);
 
 /* Returns the number of sectors to allocate for an inode SIZE
    bytes long. */
@@ -79,8 +78,10 @@ inode_create (block_sector_t sector, off_t length, bool type_dir)
       disk_inode->magic = INODE_MAGIC; //hello
       disk_inode->type_dir = type_dir;
       disk_inode->parent = ROOT_DIR_SECTOR;
-	  disk_inode->numDirect = 0; //To show no blocks have been written to
-	  if (inode_expand(disk_inode, length)) { //If we allocated to the disk properly
+	  disk_inode->numDirect = 0; //To show no blocks have been written to, already setup since using local variable
+    disk_inode->numIndirect = -1; // To show indirect have not been used at all, thus not setup
+    disk_inode->numDbIndirect = -1; // To show dbl_indirect have not been used at all, thus not setup
+	  if (inode_expand(disk_inode, length, true)) { //If we allocated to the disk properly
 		block_write(fs_device, sector, disk_inode); //Update the inode that is now on disk
 		success = true;
 	  }
@@ -331,12 +332,20 @@ inode_write_at (struct inode *inode, const void *buffer_, off_t size,
 
   if (inode->deny_write_cnt)
     return 0;
-
+  #ifdef INODE_DEBUG
+  printf(" about to expand... offest %d size %d inode->data.length %d inode->length %d\n", offset, size, inode->data.length, inode->length);
+  #endif
   if (offset + size > inode->data.length) { //If you are writing to a point past the inode
-	inode->length = inode_expand(&inode->data, offset + size - inode_length(inode)); //Now you must extend the inode that exists before writing to it and alos update the length of the inode
-	//printf("%d\n", inode->length);
-  }
+	inode_expand(&inode->data, offset + size - inode_length(inode), false); //Now you must extend the inode that exists before writing to it and alos update the length of the inode
 
+  inode->length = inode->data.length; // update the inode length with the new length
+  #ifdef INODE_DEBUG
+	printf("Done expanding %d\n", inode->length);
+  #endif
+  }
+  #ifdef INODE_DEBUG
+  printf("Now Writing... ");
+  #endif
   while (size > 0) 
     {
       /* Sector to write, starting byte offset within sector. */
@@ -347,7 +356,9 @@ inode_write_at (struct inode *inode, const void *buffer_, off_t size,
       off_t inode_left = inode_length (inode) - offset;
       int sector_left = BLOCK_SECTOR_SIZE - sector_ofs;
       int min_left = inode_left < sector_left ? inode_left : sector_left;
-
+  #ifdef INODE_DEBUG
+      printf(" sector_idx %d\n sector_ofs %d\n inode_left %d\n sector_left %d\n min_left %d\n", sector_idx, sector_ofs, inode_left, sector_left, min_left);
+      #endif
       /* Number of bytes to actually write into this sector. */
       int chunk_size = size < min_left ? size : min_left;
       if (chunk_size <= 0)
@@ -417,8 +428,11 @@ inode_length (const struct inode *inode)
   return inode->data.length;
 }
 
-bool inode_expand(struct inode_disk *inode, off_t length) { //This will be the function to expand the blocks needed in inode_create
+bool inode_expand(struct inode_disk *inode, off_t length, bool create) { //This will be the function to expand the blocks needed in inode_create
 
+  #ifdef INODE_DEBUG
+  printf("Inode_Expand inode %p, length %d numDirect %d inode_length%d", inode, length, inode->numDirect, inode->length);
+  #endif
   static char zeroes[BLOCK_SECTOR_SIZE]; //An array of zeroes to "clean" the sector data
   int sectors = bytes_to_sectors (length);// - bytes_to_sectors(inode->length); //This determines the length by which you want to expand the current inode
   int total_sectors = sectors; // save a copy of sectors
@@ -444,38 +458,41 @@ bool inode_expand(struct inode_disk *inode, off_t length) { //This will be the f
       break;
     }
   }
-
+  #ifdef INODE_DEBUG
+  printf("success %d, sectors, %d\n", success, sectors);
+  #endif
   if (!success && sectors != 0) { //Just direct pointers were not enough
-	success = false; //Set success back to false
-	inode->indirect_ptr = block.ind_ptrs; //Now we point to the block with 128 pointers
+  	success = false; //Set success back to false
+  	inode->indirect_ptr = block.ind_ptrs; //Now we point to the block with 128 pointers
 
-	for (int j = 0; j < INDIRECT_BLOCK_SIZE; j++) {
-	  block.ind_ptrs[j] = 0; //This will clean the junk inside the array of pointers
-	}
+    /*
+  	for (int j = 0; j < INDIRECT_BLOCK_SIZE; j++) {
+  	  block.ind_ptrs[j] = 0; //This will clean the junk inside the array of pointers
+  	}*/
 
-	if (inode->numIndirect == 0) {
-	  free_map_allocate(1, &inode->indirect_ptr); //Go ahead and allocate to the indirect block
-	  block_write(fs_device, inode->indirect_ptr, &block); //Let's also go ahead and write the initial state to disk
-	}
-	else { //Otherwise
-	  block_read(fs_device, inode->indirect_ptr, &block); //Otherwise read the indirect block into the filesystem
-	}
+  	if (inode->numIndirect == 0) {
+  	  free_map_allocate(1, &inode->indirect_ptr); //Go ahead and allocate to the indirect block
+  	  block_write(fs_device, inode->indirect_ptr, &block); //Let's also go ahead and write the initial state to disk
+  	}
+  	else { //Otherwise
+  	  block_read(fs_device, inode->indirect_ptr, &block); //Otherwise read the indirect block into the filesystem
+  	}
 
-	for (int j = 0; j < INDIRECT_BLOCK_SIZE; j++) {
-	  j = inode->numIndirect; //Start with the next free indirect block
-	  if (sectors > 0) { //Now we can allocate indirect blocks
-		free_map_allocate(1, &block.ind_ptrs[j]); //So now we start allocating to the indirect block array
-		block_write(fs_device, block.ind_ptrs[j], zeroes); //Now clean what is inside the allocated sector
-	 	sectors--; //We know a sector has been allocated
-	 	inode->numIndirect++; //Also increment the number of indirect blocks allocated
-	  }
-	  if (sectors == 0) { //If all the sectors were allocated
-		success = true;
-		block_write(fs_device, inode->indirect_ptr, &block); //Now we write to disk
-		inode->length += length; //Now we can update the length
-	 	break; //Get out of this loop
-	  }
-	}
+  	for (int j = 0; j < INDIRECT_BLOCK_SIZE; j++) {
+  	  j = inode->numIndirect; //Start with the next free indirect block
+  	  if (sectors > 0) { //Now we can allocate indirect blocks
+  		free_map_allocate(1, &block.ind_ptrs[j]); //So now we start allocating to the indirect block array
+  		block_write(fs_device, block.ind_ptrs[j], zeroes); //Now clean what is inside the allocated sector
+  	 	sectors--; //We know a sector has been allocated
+  	 	inode->numIndirect++; //Also increment the number of indirect blocks allocated
+  	  }
+  	  if (sectors == 0) { //If all the sectors were allocated
+  		success = true;
+  		block_write(fs_device, inode->indirect_ptr, &block); //Now we write to disk
+  		inode->length += length; //Now we can update the length
+  	 	break; //Get out of this loop
+  	  }
+  	}
   }
 
   return success;
