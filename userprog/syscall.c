@@ -258,7 +258,7 @@ syscall_handler (struct intr_frame *f) //UNUSED)
 					exit(-1, f);
 			}
 
-			f->eax = filesys_create(name, 16*sizeof (struct dir_entry), true);
+			f->eax = filesys_create(name, 2*sizeof (struct dir_entry), true);
 			break;
 
 	    }

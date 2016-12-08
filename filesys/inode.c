@@ -21,10 +21,41 @@ bytes_to_sectors (off_t size)
   return DIV_ROUND_UP (size, BLOCK_SECTOR_SIZE);
 }
 
+
+static block_sector_t
+byte_to_db_indirect_sector(const struct inode *inode, off_t length, off_t pos)
+{
+   if(pos < (DIRECT_BLOCK_SIZE*BLOCK_SECTOR_SIZE + INDIRECT_BLOCK_SIZE*BLOCK_SECTOR_SIZE + INDIRECT_BLOCK_SIZE*BLOCK_SECTOR_SIZE*INDIRECT_BLOCK_SIZE))
+   {
+    struct indirect_block block;
+    for(int i = 0; i < INDIRECT_BLOCK_SIZE; i++)
+    {
+      block.ind_ptrs[i] = 0;
+    }
+
+    ASSERT(inode->data.db_indirect_ptr > 0);
+    block_read(fs_device, inode->data.indirect_ptr, &block);
+    int pos_db_indirect = pos - DIRECT_BLOCK_SIZE*BLOCK_SECTOR_SIZE - INDIRECT_BLOCK_SIZE*BLOCK_SECTOR_SIZE;
+
+    int db_ind_index = pos_db_indirect / INDIRECT_BLOCK_SIZE*BLOCK_SECTOR_SIZE;
+    int ind_index = ( pos_db_indirect % INDIRECT_BLOCK_SIZE*BLOCK_SECTOR_SIZE ) / BLOCK_SECTOR_SIZE;
+
+
+    block_read(fs_device, block.ind_ptrs[db_ind_index], &block);
+    
+
+    return block.ind_ptrs[ind_index];
+   }
+
+   int return_sector = -1;
+   ASSERT(return_sector == 0);
+   return (block_sector_t) return_sector;
+}
+
 static block_sector_t
 byte_to_indirect_sector(const struct inode *inode, off_t length, off_t pos)
 {
-   if(pos < DIRECT_BLOCK_SIZE*BLOCK_SECTOR_SIZE*INDIRECT_BLOCK_SIZE)
+   if(pos < (DIRECT_BLOCK_SIZE*BLOCK_SECTOR_SIZE + INDIRECT_BLOCK_SIZE*BLOCK_SECTOR_SIZE))
    {
     struct indirect_block block;
     for(int i = 0; i < INDIRECT_BLOCK_SIZE; i++)
@@ -38,10 +69,12 @@ byte_to_indirect_sector(const struct inode *inode, off_t length, off_t pos)
     return block.ind_ptrs[pos_indirect / BLOCK_SECTOR_SIZE];
    }
 
-   int return_sector = -1;
-   ASSERT(return_sector == 0);
-   return (block_sector_t) return_sector;
+
+   return byte_to_db_indirect_sector(inode, length, pos);
 }
+
+
+
 /* Returns the block device sector that contains byte offset POS
    within INODE.
    Returns -1 if the byte offest POS
