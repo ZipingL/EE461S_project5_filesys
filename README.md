@@ -120,7 +120,7 @@
 	pass tests/filesys/extended/grow-two-files
 	pass tests/filesys/extended/syn-rw
 	pass tests/filesys/extended/dir-empty-name-persistence
-	FAIL tests/filesys/extended/dir-mk-tree-persistence
+	pass tests/filesys/extended/dir-mk-tree-persistence
 	pass tests/filesys/extended/dir-mkdir-persistence
 	pass tests/filesys/extended/dir-open-persistence
 	pass tests/filesys/extended/dir-over-file-persistence
@@ -130,21 +130,23 @@
 	pass tests/filesys/extended/dir-rm-tree-persistence
 	pass tests/filesys/extended/dir-rmdir-persistence
 	pass tests/filesys/extended/dir-under-file-persistence
-	FAIL tests/filesys/extended/dir-vine-persistence
+	pass tests/filesys/extended/dir-vine-persistence
 	pass tests/filesys/extended/grow-create-persistence
-	FAIL tests/filesys/extended/grow-dir-lg-persistence
+	pass tests/filesys/extended/grow-dir-lg-persistence
 	pass tests/filesys/extended/grow-file-size-persistence
-	FAIL tests/filesys/extended/grow-root-lg-persistence
-	FAIL tests/filesys/extended/grow-root-sm-persistence
-	FAIL tests/filesys/extended/grow-seq-lg-persistence
+	pass tests/filesys/extended/grow-root-lg-persistence
+	pass tests/filesys/extended/grow-root-sm-persistence
+	pass tests/filesys/extended/grow-seq-lg-persistence
 	pass tests/filesys/extended/grow-seq-sm-persistence
-	FAIL tests/filesys/extended/grow-sparse-persistence
+	pass tests/filesys/extended/grow-sparse-persistence
 	pass tests/filesys/extended/grow-tell-persistence
-	FAIL tests/filesys/extended/grow-two-files-persistence
-	FAIL tests/filesys/extended/syn-rw-persistence
-	9 of 121 tests failed.
+	pass tests/filesys/extended/grow-two-files-persistence
+	pass tests/filesys/extended/syn-rw-persistence
+	All 121 tests passed.
+
 
 ## GRADE
+	- - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - 
 
 	SUMMARY BY TEST SET
 
@@ -152,14 +154,15 @@
 	--------------------------------------------- --- --- ------ ------
 	tests/filesys/extended/Rubric.functionality    34/ 34  30.0%/ 30.0%
 	tests/filesys/extended/Rubric.robustness       10/ 10  15.0%/ 15.0%
-	tests/filesys/extended/Rubric.persistence      14/ 23  12.2%/ 20.0%
+	tests/filesys/extended/Rubric.persistence      23/ 23  20.0%/ 20.0%
 	tests/filesys/base/Rubric                      30/ 30  20.0%/ 20.0%
 	tests/userprog/Rubric.functionality           108/111   9.7%/ 10.0%
 	tests/userprog/Rubric.robustness               88/ 88   5.0%/  5.0%
 	--------------------------------------------- --- --- ------ ------
-	Total                                                  91.9%/100.0%
+	Total                                                  99.7%/100.0%
 
 	- - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - 
+
 
 
 	 
