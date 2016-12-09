@@ -606,6 +606,58 @@ inode_length (const struct inode *inode)
   return inode->data.length;
 }
 
+
+bool allocate_indirect(struct inode_disk* inode, 
+  block_sector_t double_block_sector,
+  int double_block_sector_index,
+  int num_ind_sectors,
+  bool new_double_block_time,
+  struct indirect_block* db_block)
+{
+
+
+  // allocate a double block 
+  if(new_double_block_time)
+  {
+    free_map_allocate(1, &db_block->ind_ptrs[inode->numDbIndirect]);
+    inode->numDbIndirect = inode->numDbIndirect + 1;
+    // update the inode_disk since numDbIndirect was increased
+    block_write(fs_device, inode->db_indirect_ptr, db_block);
+    double_block_sector = db_block->ind_ptrs[inode->numDbIndirect -1];
+  }
+
+  struct indirect_block ind_block; //This is for implementing indirect blocks
+  for (int j = 0; j < INDIRECT_BLOCK_SIZE; j++) {
+    ind_block.ind_ptrs[j] = 0; //This will clean the junk inside the array of pointers
+  }
+
+  // Now allocate the number of leftover sectors inside the double block
+  if(new_double_block_time)
+  for(int k = 0; k < num_ind_sectors; k++)
+  {
+    free_map_allocate(1, &ind_block.ind_ptrs[k]);
+  }
+
+  else {
+
+      block_read(fs_device, double_block_sector, &ind_block);
+    for(int i = 0; i < num_ind_sectors; i++)
+    {
+      free_map_allocate(1, &ind_block.ind_ptrs[i+double_block_sector_index]);
+    }
+  }
+  // Write the new double block into filesystem
+  if(num_ind_sectors > 0)
+  block_write(fs_device, double_block_sector, &ind_block);
+
+  bool success = true;
+
+  return success;
+}
+
+
+
+
 bool inode_expand(struct inode_disk *inode, off_t length, bool create) { //This will be the function to expand the blocks needed in inode_create
 
   #ifdef INODE_DEBUG
@@ -732,6 +784,9 @@ bool inode_expand(struct inode_disk *inode, off_t length, bool create) { //This 
         block_write(fs_device, inode->db_indirect_ptr, &db_block);
       }
 
+
+
+
       bool new_double_block_time = true;
       block_sector_t double_block_sector = 0;
       int double_block_sector_index = -1;
@@ -754,57 +809,46 @@ bool inode_expand(struct inode_disk *inode, off_t length, bool create) { //This 
         if(p < INDIRECT_BLOCK_SIZE && ind_block.ind_ptrs[p] == 0)
         {
 
-          if( (p + sectors) > INDIRECT_BLOCK_SIZE)
+          if( (p + num_ind_sectors) > INDIRECT_BLOCK_SIZE)
           {
-            PANIC("Well Shit...\n");
-          }
+            success = allocate_indirect( inode,
+              double_block_sector,
+              double_block_sector_index,
+              INDIRECT_BLOCK_SIZE - p,
+              false,
+              &db_block);
+
+              num_ind_sectors -= (INDIRECT_BLOCK_SIZE-p);
+
+              new_double_block_time = true;
+            }
+
+          
           double_block_sector = db_block.ind_ptrs[i];
           double_block_sector_index = p;
           new_double_block_time = false;
           break;
-        }
+         }
+       }
+        
 
-      }
+      
       #ifdef INODE_DEBUG
       printf("Double Block Sector %d, P %d last sector %d \n", double_block_sector, double_block_sector_index, db_block.ind_ptrs[0]);
       #endif
-      // allocate a double block 
-      if(new_double_block_time)
-      {
-        free_map_allocate(1, &db_block.ind_ptrs[inode->numDbIndirect]);
-        inode->numDbIndirect = inode->numDbIndirect + 1;
-        // update the inode_disk since numDbIndirect was increased
-        block_write(fs_device, inode->db_indirect_ptr, &db_block);
-        double_block_sector = db_block.ind_ptrs[inode->numDbIndirect -1];
+
+
+
+      success = allocate_indirect( inode, 
+        double_block_sector,
+        double_block_sector_index,
+        num_ind_sectors,
+        new_double_block_time,
+        &db_block);
       }
 
 
-      struct indirect_block ind_block; //This is for implementing indirect blocks
-      for (int j = 0; j < INDIRECT_BLOCK_SIZE; j++) {
-        ind_block.ind_ptrs[j] = 0; //This will clean the junk inside the array of pointers
-      }
       
-      // Now allocate the number of leftover sectors inside the double block
-      if(new_double_block_time)
-      for(int k = 0; k < num_ind_sectors; k++)
-      {
-        free_map_allocate(1, &ind_block.ind_ptrs[k]);
-      }
-      
-      else {
-
-          block_read(fs_device, double_block_sector, &ind_block);
-        for(int i = 0; i < num_ind_sectors; i++)
-        {
-          free_map_allocate(1, &ind_block.ind_ptrs[i+double_block_sector_index]);
-        }
-      }
-      // Write the new double block into filesystem
-      if(num_ind_sectors > 0)
-      block_write(fs_device, double_block_sector, &ind_block);
-
-      success = true;
-    }
   } // end if (!success && sectors > 0)
 
   return success;
