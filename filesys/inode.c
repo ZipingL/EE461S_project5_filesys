@@ -487,7 +487,7 @@ inode_write_at (struct inode *inode, const void *buffer_, off_t size,
 
 
   int inode_actual_size = inode_actual_length(inode);
-  // Update the length if we are writing past the file's size
+  // Update the length if we have not gone past the file's actual size
   if(inode->data.length  < inode_actual_size && ( (offset + size) > inode->data.length && (offset + size)  <= inode_actual_size)  )
   {
     inode->length = offset_copy + size;
@@ -712,9 +712,6 @@ bool allocate_indirect(struct inode_disk* inode,
       {
         block_write(fs_device, inode->db_indirect_ptr, &db_block);
       }
-
-
-
 
       bool new_double_block_time = true;
       block_sector_t double_block_sector = 0;
